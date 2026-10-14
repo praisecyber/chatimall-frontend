@@ -117,7 +117,7 @@
   z-index: 40;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  background: rgba(14, 12, 27, 0.85);
+  background: #000;
   border-bottom: 1px solid var(--pc-line);
   position: fixed;
   top: 0;
@@ -127,7 +127,7 @@
 }
 
 .pc-header-scrolled {
-  background: rgba(14, 12, 27, 0.95);
+  background: #000;
   border-bottom-color: rgba(248, 241, 231, 0.15);
 }
 
@@ -1133,7 +1133,7 @@
 .pc-footer {
   border-top: 1px solid var(--pc-line);
   padding: 32px 0 42px;
-  background: var(--pc-ink-deep);
+  background: #000;
 }
 
 .pc-footer-row {
@@ -1478,7 +1478,7 @@ body {
 }
 
 .pc-theme-milk .pc-header {
-  background: rgba(14, 12, 27, 0.85);
+  background: #000;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-bottom-color: rgba(255, 255, 255, 0.12);
@@ -1486,14 +1486,14 @@ body {
 }
 
 .pc-theme-milk .pc-header-scrolled {
-  background: rgba(14, 12, 27, 0.95);
+  background: #000;
   border-bottom-color: rgba(255, 255, 255, 0.12);
   box-shadow: none;
 }
 
 .pc-page.pc-theme-milk.pc-is-scrolling .pc-header,
 .pc-page.pc-theme-milk.pc-is-scrolling .pc-footer {
-  background: rgba(14, 12, 27, 0.85);
+  background: rgba(0, 0, 0, 0.55);
 }
 
 /* Logo text sits on a black/translucent header, so it must stay light here — this used to be
@@ -1859,7 +1859,7 @@ body {
 
 /* Footer in Milk Mode */
 .pc-theme-milk .pc-footer {
-  background: rgba(14, 12, 27, 0.85);
+  background: #000;
   border-top-color: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);

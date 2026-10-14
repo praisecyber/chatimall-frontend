@@ -26,9 +26,7 @@ import type { Chat, DbMessage, Message } from '@/types';
 import { connectSocket } from '@/lib/socket';
 import { useAuth } from '@/lib/auth';
 import { fetchMessages, fetchPeerReadAt, fetchStarredMessages, fetchVoiceTranslation, mapMessage, markRead, sendMedia, sendText, setConversationArchived, setMessageStarred } from '@/lib/api';
-import type { VoiceTranslationResult } from '@/lib/api';
 import { decryptMediaUrl, decryptMessageBody, getPeerKeyStatus, trustPeerKey } from '@/lib/e2ee';
-import { api } from '@/lib/http';
 import { formatClock, formatDuration } from '@/lib/format';
 
 interface ChatConversationProps {
