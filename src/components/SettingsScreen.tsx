@@ -77,7 +77,7 @@ export default function SettingsScreen({
   onOpenChat,
   onLogout,
 }: SettingsScreenProps) {
-  const { profile: authProfile, requestOtp, updateProfile, uploadAvatar } = useAuth();
+  const { profile: authProfile, requestOtp, refreshProfile, updateProfile, uploadAvatar } = useAuth();
   const [profile, setProfile] = useState<UserProfile>({
     name: authProfile?.name ?? '',
     bio: authProfile?.bio ?? '',
@@ -86,6 +86,10 @@ export default function SettingsScreen({
   });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(authProfile?.avatar_url ?? null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [phoneChangeCode, setPhoneChangeCode] = useState('');
+  const [phoneChangePin, setPhoneChangePin] = useState('');
+  const [phoneChangeDevCode, setPhoneChangeDevCode] = useState<string | null>(null);
+  const [phoneChangePending, setPhoneChangePending] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const pickAvatar = async (file?: File | null) => {
@@ -108,13 +112,59 @@ export default function SettingsScreen({
     }
     setSavingProfile(true);
     try {
+      const nextPhone = profile.phone.replace(/\D/g, '');
+      const currentPhone = (authProfile?.phone ?? '').replace(/\D/g, '');
+      if (nextPhone !== currentPhone) {
+        const response = await requestOtp(profile.phone.trim());
+        setPhoneChangeCode('');
+        setPhoneChangePin('');
+        setPhoneChangeDevCode(response.devCode ?? null);
+        setPhoneChangePending(true);
+        setActiveModal('phone-change');
+        showToast('Verification code sent to your new number');
+        return;
+      }
       await updateProfile({ name: profile.name.trim(), bio: profile.bio.trim(), avatar_url: avatarUrl });
       setActiveModal(null);
       showToast('Profile saved');
-    } catch {
-      showToast('Could not save profile');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not save profile');
+    } finally {
+      setSavingProfile(false);
     }
-    setSavingProfile(false);
+  };
+
+  const submitPhoneChange = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!phoneChangePending) return;
+    setSavingProfile(true);
+    try {
+      const changedProfile = await api<{ phone: string }>('/api/me/phone', {
+        method: 'PATCH',
+        body: {
+          phone: profile.phone.trim(),
+          code: phoneChangeCode,
+          ...(settings.security.two_factor_auth ? { pin: phoneChangePin } : {}),
+        },
+      });
+      setProfile((current) => ({ ...current, phone: `+${changedProfile.phone}` }));
+      setPhoneChangePending(false);
+      setActiveModal('edit-profile');
+      try {
+        await refreshProfile();
+        await updateProfile({ name: profile.name.trim(), bio: profile.bio.trim(), avatar_url: avatarUrl });
+        setActiveModal(null);
+        showToast('Phone number updated');
+      } catch (error) {
+        showToast(error instanceof Error
+          ? `Phone number updated, but other profile changes could not be saved: ${error.message}`
+          : 'Phone number updated, but other profile changes could not be saved');
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not update phone number');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   // Active sub-settings modal state
@@ -373,29 +423,30 @@ export default function SettingsScreen({
         { icon: User, label: 'Personal Info', color: 'emerald', keywords: 'profile name bio phone photo', onClick: () => setActiveModal('personal-info') },
         { icon: Lock, label: 'Privacy', color: 'emerald', keywords: 'read receipts last seen disappearing messages', badge: 'Updated', onClick: () => setActiveModal('privacy') },
         { icon: Shield, label: 'Security & Encryption', color: 'emerald', keywords: 'two step verification pin device lock keys', onClick: () => setActiveModal('security') },
-        { icon: Users, label: 'Contacts', color: 'sky', keywords: 'address book phone sync', onClick: () => void openSettingsSection('contacts') },
+        { icon: Users, label: 'Contacts', color: 'emerald', keywords: 'address book phone sync', onClick: () => void openSettingsSection('contacts') },
       ],
     },
     {
       title: 'Preferences',
       items: [
-        { icon: Bell, label: 'Notifications', color: 'amber', keywords: 'push sound alerts permission', onClick: () => setActiveModal('notifications') },
-        { icon: Palette, label: 'Chat Wallpaper', color: 'rose', keywords: 'appearance background', badge: settings.appearance.wallpaper !== 'default' ? settings.appearance.wallpaper : undefined, onClick: () => setActiveModal('wallpaper') },
-        { icon: Languages, label: 'Voice Note Translation', color: 'sky', keywords: 'translate language voice notes hausa yoruba igbo twi', badge: settings.translation.mode !== 'off' ? TRANSLATION_LANGUAGES.find((l) => l.code === settings.translation.language)?.name : 'Off', onClick: () => setActiveModal('translation') },
+        { icon: Bell, label: 'Notifications', color: 'emerald', keywords: 'push sound alerts permission', onClick: () => setActiveModal('notifications') },
+        { icon: Palette, label: 'Chat Wallpaper', color: 'emerald', keywords: 'appearance background', badge: settings.appearance.wallpaper !== 'default' ? settings.appearance.wallpaper : undefined, onClick: () => setActiveModal('wallpaper') },
+        { icon: Languages, label: 'Voice Note Translation', color: 'emerald', keywords: 'translate language voice notes hausa yoruba igbo twi', badge: settings.translation.mode !== 'off' ? TRANSLATION_LANGUAGES.find((l) => l.code === settings.translation.language)?.name : 'Off', onClick: () => setActiveModal('translation') },
       ],
     },
     {
       title: 'Your activity',
       items: [
-        { icon: Archive, label: 'Archived Chats', color: 'gray', keywords: 'restore hidden conversations', onClick: () => void openSettingsSection('archived') },
-        { icon: Star, label: 'Starred Messages', color: 'amber', keywords: 'saved favorites', onClick: () => void openSettingsSection('starred') },
-        { icon: Database, label: 'Storage & Data', color: 'teal', keywords: 'files usage media cache', onClick: () => void openSettingsSection('storage') },
+        { icon: Archive, label: 'Archived Chats', color: 'emerald', keywords: 'restore hidden conversations', onClick: () => void openSettingsSection('archived') },
+        { icon: Star, label: 'Starred Messages', color: 'emerald', keywords: 'saved favorites', onClick: () => void openSettingsSection('starred') },
+        { icon: Database, label: 'Storage & Data', color: 'emerald', keywords: 'files usage media cache', onClick: () => void openSettingsSection('storage') },
       ],
     },
     {
       title: 'Support',
       items: [
-        { icon: HelpCircle, label: 'Help & FAQ', color: 'sky', keywords: 'support contact us', onClick: () => setActiveModal('help') },
+        { icon: HelpCircle, label: 'Help & FAQ', color: 'emerald', keywords: 'support contact us', onClick: () => setActiveModal('help') },
+        { icon: LogOut, label: 'Log out', color: 'emerald', keywords: 'sign out session leave account', onClick: () => setActiveModal('logout') },
       ],
     },
   ];
@@ -425,7 +476,7 @@ export default function SettingsScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto pb-6">
-        <div className="mx-4 mt-1 overflow-hidden rounded-2xl border border-paper-line bg-[#F2F7F3]">
+        <div className="mx-4 mt-1 overflow-hidden rounded-2xl border border-paper-line bg-paper-mist">
           <button
             onClick={() => setActiveModal('edit-profile')}
             className="flex w-full items-center gap-3 px-3.5 py-3.5 text-left transition-colors hover:bg-white/60"
@@ -515,7 +566,7 @@ export default function SettingsScreen({
         <div className="mt-4 px-4">
           <button
             onClick={() => setActiveModal('logout')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 hover:bg-rose-500/10 active:scale-95 transition-all"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-600/10 border border-brand-200 text-brand-700 hover:bg-brand-600/15 active:scale-95 transition-all"
           >
             <LogOut className="w-5 h-5" />
             <span className="font-semibold text-sm">Log Out</span>
@@ -579,10 +630,12 @@ export default function SettingsScreen({
             <div>
               <label className="text-xs font-semibold text-ink-mute uppercase">Phone Number</label>
               <input
-                type="text"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 value={profile.phone}
-                readOnly
-                className="w-full mt-1.5 px-3 py-2.5 rounded-xl bg-[#0f1623]/60 border border-paper-line text-ink-mute text-sm outline-none cursor-not-allowed"
+                onChange={(event) => setProfile({ ...profile, phone: event.target.value })}
+                className="w-full mt-1.5 px-3 py-2.5 rounded-xl bg-paper-mist border border-paper-line text-ink text-sm outline-none focus:border-brand-500"
               />
             </div>
 
@@ -594,6 +647,57 @@ export default function SettingsScreen({
               Save Profile
             </button>
           </div>
+        </ModalWrapper>
+      )}
+
+      {activeModal === 'phone-change' && (
+        <ModalWrapper
+          title="Verify New Phone Number"
+          onClose={() => setActiveModal('edit-profile')}
+        >
+          <form onSubmit={(event) => void submitPhoneChange(event)} className="space-y-4">
+            <p className="text-sm leading-5 text-ink-mute">
+              Enter the verification code sent to <span className="font-semibold text-ink">{profile.phone}</span>.
+            </p>
+            {phoneChangeDevCode && (
+              <p className="text-sm text-amber-700">Dev code: <b>{phoneChangeDevCode}</b></p>
+            )}
+            <div>
+              <label htmlFor="phone-change-code" className="text-xs font-semibold uppercase text-ink-mute">SMS verification code</label>
+              <input
+                id="phone-change-code"
+                required
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={8}
+                value={phoneChangeCode}
+                onChange={(event) => setPhoneChangeCode(event.target.value.replace(/\D/g, ''))}
+                className="mt-1.5 w-full rounded-xl border border-paper-line bg-paper-mist px-3 py-2.5 text-sm text-ink outline-none focus:border-brand-500"
+              />
+            </div>
+            {settings.security.two_factor_auth && (
+              <div>
+                <label htmlFor="phone-change-pin" className="text-xs font-semibold uppercase text-ink-mute">Current security PIN</label>
+                <input
+                  id="phone-change-pin"
+                  required
+                  inputMode="numeric"
+                  autoComplete="current-password"
+                  maxLength={12}
+                  value={phoneChangePin}
+                  onChange={(event) => setPhoneChangePin(event.target.value.replace(/\D/g, ''))}
+                  className="mt-1.5 w-full rounded-xl border border-paper-line bg-paper-mist px-3 py-2.5 text-sm text-ink outline-none focus:border-brand-500"
+                />
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="w-full rounded-xl bg-brand-600 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+            >
+              {savingProfile ? 'Verifying...' : 'Verify & Update Number'}
+            </button>
+          </form>
         </ModalWrapper>
       )}
 
@@ -1092,7 +1196,7 @@ export default function SettingsScreen({
                 {storageUsage ? (['photos', 'videos', 'audio', 'files'] as const).map((kind) => {
                   const item = storageUsage.by_type[kind];
                   const ratio = storageUsage.total_bytes ? item.bytes / storageUsage.total_bytes * 100 : 0;
-                  const colors = { photos: 'bg-emerald-500', videos: 'bg-sky-500', audio: 'bg-amber-500', files: 'bg-rose-500' };
+                  const colors = { photos: 'bg-brand-600', videos: 'bg-brand-600', audio: 'bg-brand-600', files: 'bg-brand-600' };
                   return (
                     <div key={kind}>
                       <div className="mb-1 flex justify-between text-xs text-ink-mute">
@@ -1241,12 +1345,6 @@ function SettingRow({
 }) {
   const colorMap: Record<string, string> = {
     emerald: 'bg-brand-600/10 text-brand-600',
-    sky: 'bg-sky-500/10 text-sky-600',
-    amber: 'bg-amber-500/10 text-amber-600',
-    rose: 'bg-rose-500/10 text-rose-600',
-    violet: 'bg-violet-500/10 text-violet-600',
-    teal: 'bg-teal-500/10 text-teal-600',
-    gray: 'bg-gray-500/10 text-ink-mute',
   };
 
   return (
