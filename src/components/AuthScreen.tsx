@@ -12,6 +12,43 @@ function Shell({ children, wide = false }: { children: React.ReactNode; wide?: b
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#f5f7f5] px-4 py-8 text-ink">
       <div className="pointer-events-none absolute -left-24 -top-28 h-72 w-72 rounded-full bg-brand-600/[0.06] blur-3xl" />
       <div className="pointer-events-none absolute -bottom-36 -right-24 h-80 w-80 rounded-full bg-brand-600/[0.05] blur-3xl" />
+      <svg
+        className="auth-network"
+        viewBox="0 0 1440 900"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <g className="auth-network__links">
+          <path d="M0 170 155 265 310 180 475 295 635 215 800 320 975 200 1155 305 1325 185 1440 255" />
+          <path d="M0 625 155 520 320 645 480 500 660 605 820 475 1010 590 1190 480 1365 625 1440 575" />
+          <path d="M155 265 155 520M310 180 320 645M475 295 480 500M635 215 660 605M800 320 820 475M975 200 1010 590M1155 305 1190 480M1325 185 1365 625" />
+          <path d="M0 170 320 645M310 180 660 605M635 215 1010 590M975 200 1365 625M0 625 475 295M320 645 800 320M660 605 1155 305M1010 590 1440 255" />
+        </g>
+        <g className="auth-network__pulses">
+          <path className="auth-network__pulse" d="M0 170 155 265 310 180 475 295 635 215 800 320 975 200 1155 305 1325 185 1440 255" />
+          <path className="auth-network__pulse auth-network__pulse--slow" d="M0 625 155 520 320 645 480 500 660 605 820 475 1010 590 1190 480 1365 625 1440 575" />
+          <path className="auth-network__pulse auth-network__pulse--reverse" d="M155 265 155 520M310 180 320 645M475 295 480 500M635 215 660 605M800 320 820 475M975 200 1010 590M1155 305 1190 480M1325 185 1365 625" />
+          <path className="auth-network__pulse auth-network__pulse--slow" d="M0 170 320 645M310 180 660 605M635 215 1010 590M975 200 1365 625M0 625 475 295M320 645 800 320M660 605 1155 305M1010 590 1440 255" />
+        </g>
+        <g className="auth-network__nodes">
+          <circle cx="155" cy="265" r="4" />
+          <circle cx="310" cy="180" r="3" />
+          <circle cx="320" cy="645" r="4" />
+          <circle cx="475" cy="295" r="3" />
+          <circle cx="480" cy="500" r="4" />
+          <circle cx="635" cy="215" r="4" />
+          <circle cx="660" cy="605" r="3" />
+          <circle cx="800" cy="320" r="4" />
+          <circle cx="820" cy="475" r="3" />
+          <circle cx="975" cy="200" r="4" />
+          <circle cx="1010" cy="590" r="3" />
+          <circle cx="1155" cy="305" r="4" />
+          <circle cx="1190" cy="480" r="3" />
+          <circle cx="1325" cy="185" r="4" />
+          <circle cx="1365" cy="625" r="4" />
+        </g>
+      </svg>
       <div className={`relative z-10 flex w-full ${wide ? 'max-w-4xl' : 'max-w-md'} flex-col items-center`}>
         <div className="mb-6 flex items-center gap-3">
           <BrandMark size={42} />

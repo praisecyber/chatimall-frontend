@@ -1973,6 +1973,89 @@ body {
   background: #E4EEE8;
 }
 
+.auth-network {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+.auth-network__links,
+.auth-network__pulses {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-network__links {
+  stroke: #5f9c80;
+  stroke-width: 1.1;
+  opacity: 0.2;
+}
+
+.auth-network__pulses {
+  stroke: #25845f;
+  stroke-width: 1.6;
+  opacity: 0.65;
+}
+
+.auth-network__pulse {
+  stroke-dasharray: 1 34;
+  animation: auth-network-flow 18s linear infinite;
+}
+
+.auth-network__pulse--slow {
+  animation-duration: 26s;
+}
+
+.auth-network__pulse--reverse {
+  animation-direction: reverse;
+  animation-duration: 22s;
+}
+
+.auth-network__nodes circle {
+  fill: #378f6b;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: auth-network-node 4s ease-in-out infinite;
+}
+
+.auth-network__nodes circle:nth-child(3n) {
+  animation-delay: -1.3s;
+}
+
+.auth-network__nodes circle:nth-child(3n + 1) {
+  animation-delay: -2.6s;
+}
+
+@keyframes auth-network-flow {
+  to {
+    stroke-dashoffset: -280;
+  }
+}
+
+@keyframes auth-network-node {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-network__pulse,
+  .auth-network__nodes circle {
+    animation: none;
+  }
+}
+
 /* Chat wallpaper: vines carrying leaf-shaped speech bubbles */
 .wc-vine {
   background-color: #F5FAF7;
