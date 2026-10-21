@@ -70,6 +70,39 @@ export async function ensureDeviceKeyPair(): Promise<CryptoKeyPair> {
     return pair;
 }
 
+export async function exportDeviceKeyPair(): Promise<KeyPairRecord> {
+    const raw = await secureGetItem(KEY_PAIR_STORAGE_KEY);
+    if (!raw) throw new Error('This device encryption key is unavailable.');
+    try {
+        const record = JSON.parse(raw) as KeyPairRecord;
+        await importEcdhKey(record.privateKeyJwk);
+        await importEcdhKey(record.publicKeyJwk);
+        return record;
+    } catch {
+        throw new Error('This device encryption key is unavailable.');
+    }
+}
+
+export async function restoreDeviceKeyPair(record: KeyPairRecord): Promise<void> {
+    if (
+        !record
+        || typeof record !== 'object'
+        || record.privateKeyJwk?.kty !== 'EC'
+        || record.privateKeyJwk?.crv !== 'P-256'
+        || typeof record.privateKeyJwk?.d !== 'string'
+        || record.publicKeyJwk?.kty !== 'EC'
+        || record.publicKeyJwk?.crv !== 'P-256'
+        || typeof record.publicKeyJwk?.x !== 'string'
+        || typeof record.publicKeyJwk?.y !== 'string'
+    ) {
+        throw new Error('This backup does not contain a valid encryption key.');
+    }
+    await importEcdhKey(record.privateKeyJwk);
+    await importEcdhKey(record.publicKeyJwk);
+    await secureSetItem(KEY_PAIR_STORAGE_KEY, JSON.stringify(record));
+    await api('/api/me', { method: 'PATCH', body: { public_key: record.publicKeyJwk } });
+}
+
 export async function exportPublicKey(): Promise<JsonWebKey> {
     const { publicKey } = await ensureDeviceKeyPair();
     return crypto.subtle.exportKey('jwk', publicKey);

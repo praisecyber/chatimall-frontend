@@ -39,9 +39,23 @@ After signing in with a phone number, open **Settings → Personal Info → Add 
 
 1. Push this repo to GitHub.
 2. In Vercel: **New Project** → import repo. Vercel reads [vercel.json](file:///C:/Users/PRAISECYBER/Desktop/chatimall_full/frontend/vercel.json) automatically.
-3. Set one **environment variable**:
+3. Set the following **environment variables**:
    - `VITE_API_URL` = your backend's full URL (e.g. `https://chatimall-backend.onrender.com`)
+   - `VITE_GOOGLE_CLIENT_ID` = Google OAuth **Web application** client ID for Drive backups
 4. Deploy.
+
+## Google Drive chat backups
+
+The Settings → Chat backup screen stores password-encrypted chat history and the device encryption key in the signed-in user's Google Drive. Google Drive receives only the encrypted backup; Chatimall does not receive the backup password. Attachments remain in Chatimall storage and are not included in the backup file.
+
+To enable browser backups:
+
+1. Create a Google Cloud project and enable the **Google Drive API**.
+2. Configure the OAuth consent screen and add the intended account as a test user while the app is in testing.
+3. Create an OAuth client ID of type **Web application**. Add `http://localhost:5173` and the deployed frontend origin to **Authorized JavaScript origins**.
+4. Set `VITE_GOOGLE_CLIENT_ID` to that client ID in `frontend/.env.local` for local testing and in the Vercel project environment for production. Rebuild/redeploy after changing it. Do not add a client secret to the frontend.
+
+Backups are currently manual and available in the browser version. Google blocks browser-based OAuth inside Android WebViews; enabling Drive backup in the APK requires a separate native Android Google sign-in integration and Android OAuth client. Scheduled automatic backups are not enabled.
 
 ## Android APK (Capacitor)
 
@@ -62,3 +76,4 @@ Then in Android Studio: **Build → Generate Signed Bundle / APK** (create a key
 | Variable | Local dev | Production (Vercel / Android build) |
 |---|---|---|
 | `VITE_API_URL` | Unset (Vite proxies to localhost:4000) | **Required** — full backend base URL (no trailing slash) |
+| `VITE_GOOGLE_CLIENT_ID` | Unset | Google OAuth Web client ID; required for browser Google Drive backups |

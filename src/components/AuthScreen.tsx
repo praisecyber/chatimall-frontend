@@ -267,9 +267,9 @@ export function AuthScreen() {
       {step === 'phone' && loginMethod === 'phone' ? (
         <form onSubmit={sendCode} className="space-y-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Create or sign in with phone</h1>
             <p className="mt-1.5 text-sm leading-relaxed text-ink-mute">
-              Enter your phone number to securely sign in to Chatimall.
+              Enter your phone number to create your Chatimall account on first use or continue on this device.
             </p>
           </div>
           <input
@@ -289,9 +289,9 @@ export function AuthScreen() {
       ) : step === 'phone' && loginMethod === 'email' ? (
         <form onSubmit={sendEmailCode} className="space-y-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Sign in with email</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Create or sign in with email</h1>
             <p className="mt-1.5 text-sm leading-relaxed text-ink-mute">
-              Enter a verified email linked to an existing Chatimall account. If it matches, we’ll send a sign-in code.
+              Enter your email to create your Chatimall account on first use, or sign in if it is already linked.
             </p>
           </div>
           <input

@@ -12,6 +12,7 @@ This installs Capacitor if missing, builds the web app, creates the `android/` p
 mic/camera/notification permissions, syncs, and runs Gradle. The APK ends up at
 `android/app/build/outputs/apk/debug/app-debug.apk`. Copy it to a phone and install it.
 (`.env` must exist first, because `VITE_API_URL` is baked into the build.)
+Google Drive chat backups are currently available in the browser version only. The APK needs native Google sign-in/OAuth configuration before it can use Drive backups.
 
 To work in Android Studio instead: `npm run android:sync` then `npm run android:open`.
 

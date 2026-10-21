@@ -42,9 +42,13 @@ import {
   QrCode,
   Search,
   Monitor,
+  Download,
+  Upload,
 } from 'lucide-react';
 import type { Chat, SettingsContact, SettingsPreferences, StarredMessageItem, StorageUsage, UserProfile } from '@/types';
 import { secureSetItem } from '@/lib/secure';
+import { listDriveBackups, restoreDriveBackup, uploadDriveBackup } from '@/lib/backup';
+import type { GoogleDriveBackup } from '@/lib/backup';
 
 interface SettingsScreenProps {
   onWallpaperChange?: (wallpaper: string) => void;
@@ -239,6 +243,14 @@ export default function SettingsScreen({
   const [supportSubject, setSupportSubject] = useState('');
   const [supportMessage, setSupportMessage] = useState('');
   const [sendingSupport, setSendingSupport] = useState(false);
+  const [backupPassword, setBackupPassword] = useState('');
+  const [backupPasswordConfirm, setBackupPasswordConfirm] = useState('');
+  const [restorePassword, setRestorePassword] = useState('');
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [driveBackups, setDriveBackups] = useState<GoogleDriveBackup[]>([]);
+  const [loadingDriveBackups, setLoadingDriveBackups] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -313,6 +325,65 @@ export default function SettingsScreen({
       showToast(error instanceof Error ? error.message : 'Could not send request');
     } finally {
       setSendingSupport(false);
+    }
+  };
+
+  const createBackup = async () => {
+    setBackupError(null);
+    if (!authProfile?.id) {
+      setBackupError('Your account could not be identified. Sign in again and retry.');
+      return;
+    }
+    if (backupPassword !== backupPasswordConfirm) {
+      setBackupError('The backup passwords do not match.');
+      return;
+    }
+    setBackupBusy(true);
+    try {
+      const backup = await uploadDriveBackup(backupPassword, authProfile.id);
+      setDriveBackups((rows) => [backup, ...rows.filter((row) => row.id !== backup.id)]);
+      setBackupPassword('');
+      setBackupPasswordConfirm('');
+      showToast('Encrypted backup saved to Google Drive');
+    } catch (error) {
+      setBackupError(error instanceof Error ? error.message : 'Could not create the backup.');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const loadDriveBackups = async () => {
+    setBackupError(null);
+    setLoadingDriveBackups(true);
+    try {
+      setDriveBackups(await listDriveBackups());
+    } catch (error) {
+      setBackupError(error instanceof Error ? error.message : 'Could not load Google Drive backups.');
+    } finally {
+      setLoadingDriveBackups(false);
+    }
+  };
+
+  const restoreBackup = async (backup: GoogleDriveBackup) => {
+    setBackupError(null);
+    if (!authProfile?.id) {
+      setBackupError('Your account could not be identified. Sign in again and retry.');
+      return;
+    }
+    if (!restorePassword) {
+      setBackupError('Enter the password used to encrypt this backup.');
+      return;
+    }
+    setRestoreBusy(true);
+    try {
+      await restoreDriveBackup(backup.id, restorePassword, authProfile.id);
+      await refreshProfile();
+      setRestorePassword('');
+      showToast('Encryption key restored from Google Drive');
+    } catch (error) {
+      setBackupError(error instanceof Error ? error.message : 'Could not restore this backup.');
+    } finally {
+      setRestoreBusy(false);
     }
   };
 
@@ -472,6 +543,7 @@ export default function SettingsScreen({
         { icon: Lock, label: 'Privacy', color: 'emerald', keywords: 'read receipts last seen disappearing messages', badge: 'Updated', onClick: () => setActiveModal('privacy') },
         { icon: Shield, label: 'Security & Encryption', color: 'emerald', keywords: 'two step verification pin device lock keys', onClick: () => setActiveModal('security') },
         { icon: Monitor, label: 'Link an existing account', color: 'emerald', keywords: 'linked devices link device web browser computer qr code sessions', onClick: () => setActiveModal('linked-devices') },
+        { icon: Database, label: 'Chat backup', color: 'emerald', keywords: 'backup restore encrypted chats messages encryption key', onClick: () => setActiveModal('backup') },
         { icon: Users, label: 'Contacts', color: 'emerald', keywords: 'address book phone sync', onClick: () => void openSettingsSection('contacts') },
       ],
     },
@@ -1254,6 +1326,117 @@ export default function SettingsScreen({
       )}
 
       {/* 6. Notifications Modal */}
+      {activeModal === 'backup' && (
+        <ModalWrapper title="Chat backup" onClose={() => setActiveModal(null)}>
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-brand-600/15 bg-brand-600/[0.06] p-4">
+              <div className="flex items-start gap-3">
+                <Shield className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" />
+                <div>
+                  <h4 className="text-sm font-bold text-ink">Back up to Google Drive</h4>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-mute">
+                    Chat history and your encryption key are encrypted on this device before being saved to your Google Drive.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-paper-line bg-white p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-ink">Last backup</h4>
+                  <p className="mt-1 text-xs text-ink-mute">
+                    {driveBackups[0] ? new Date(driveBackups[0].modifiedTime).toLocaleString() : 'Check Google Drive for your latest backup'}
+                  </p>
+                </div>
+                <Download className="h-5 w-5 text-brand-700" />
+              </div>
+              <label className="mt-4 block text-xs font-semibold text-ink" htmlFor="backup-password">Backup password</label>
+              <input
+                id="backup-password"
+                type="password"
+                autoComplete="new-password"
+                minLength={12}
+                value={backupPassword}
+                onChange={(event) => setBackupPassword(event.target.value)}
+                placeholder="At least 12 characters"
+                className="mt-1.5 w-full rounded-xl border border-paper-line bg-paper-mist px-3 py-2.5 text-sm outline-none focus:border-brand-500"
+              />
+              <label className="mt-3 block text-xs font-semibold text-ink" htmlFor="backup-password-confirm">Confirm password</label>
+              <input
+                id="backup-password-confirm"
+                type="password"
+                autoComplete="new-password"
+                minLength={12}
+                value={backupPasswordConfirm}
+                onChange={(event) => setBackupPasswordConfirm(event.target.value)}
+                placeholder="Re-enter your backup password"
+                className="mt-1.5 w-full rounded-xl border border-paper-line bg-paper-mist px-3 py-2.5 text-sm outline-none focus:border-brand-500"
+              />
+              <button
+                type="button"
+                disabled={backupBusy || restoreBusy || backupPassword.length < 12 || !backupPasswordConfirm}
+                onClick={() => void createBackup()}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                {backupBusy ? 'Saving encrypted backup…' : 'Back up now'}
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-paper-line bg-white p-4">
+              <div className="flex items-center gap-2">
+                <Upload className="h-4 w-4 text-brand-700" />
+                <h4 className="text-sm font-bold text-ink">Restore encryption key</h4>
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-ink-mute">
+                Sign in to the same account, find a backup in Google Drive, and enter its password to restore the encryption key on this device.
+              </p>
+              <label className="mt-3 block text-xs font-semibold text-ink" htmlFor="restore-backup-password">Backup password</label>
+              <input
+                id="restore-backup-password"
+                type="password"
+                autoComplete="current-password"
+                value={restorePassword}
+                onChange={(event) => setRestorePassword(event.target.value)}
+                placeholder="Enter the password used for this backup"
+                className="mt-1.5 w-full rounded-xl border border-paper-line bg-paper-mist px-3 py-2.5 text-sm outline-none focus:border-brand-500"
+              />
+              <button
+                type="button"
+                disabled={backupBusy || restoreBusy || loadingDriveBackups}
+                onClick={() => void loadDriveBackups()}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-paper-line px-4 py-3 text-sm font-bold text-ink disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                {loadingDriveBackups ? 'Checking Google Drive…' : 'Find backups in Google Drive'}
+              </button>
+              {driveBackups.map((backup) => (
+                <div key={backup.id} className="mt-3 flex items-center gap-3 rounded-xl bg-paper-mist p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-ink">{backup.name}</p>
+                    <p className="mt-1 text-[11px] text-ink-mute">{new Date(backup.modifiedTime).toLocaleString()}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={backupBusy || restoreBusy || !restorePassword}
+                    onClick={() => void restoreBackup(backup)}
+                    className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-bold text-brand-700 disabled:opacity-50"
+                  >
+                    {restoreBusy ? 'Restoring…' : 'Restore'}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl bg-paper-mist p-3 text-xs leading-relaxed text-ink-mute">
+              The backup uses your password and AES-256 encryption before upload. Keep the password safe; Chatimall cannot recover it. Attachments remain in your Chatimall account and are not copied into the backup. Automatic scheduled backups need additional Google authorization setup.
+            </div>
+            {backupError && <p role="alert" className="text-sm text-rose-600">{backupError}</p>}
+          </div>
+        </ModalWrapper>
+      )}
+
       {activeModal === 'notifications' && (
         <ModalWrapper title="Notifications" onClose={() => setActiveModal(null)}>
           <div className="space-y-4">
