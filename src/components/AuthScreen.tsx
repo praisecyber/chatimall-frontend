@@ -1,5 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Camera, Loader2, Mail, QrCode, RefreshCw, ShieldCheck, Smartphone } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Camera,
+  Check,
+  CheckCheck,
+  ChevronDown,
+  FileText,
+  Globe,
+  Heart,
+  Loader2,
+  Lock,
+  Mail,
+  Mic,
+  MoreVertical,
+  QrCode,
+  RefreshCw,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  X,
+  Zap,
+} from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { APP_NAME, APP_TAGLINE } from '@/brand';
 import BrandMark from '@/components/BrandMark';
@@ -65,68 +87,7 @@ function Shell({ children, wide = false }: { children: React.ReactNode; wide?: b
   );
 }
 
-function WelcomeArtwork() {
-  return (
-    <svg
-      viewBox="0 0 320 260"
-      className="mx-auto h-full w-full max-w-[320px]"
-      role="img"
-      aria-label="Illustration of a phone surrounded by chat bubbles and leaves"
-    >
-      <circle cx="160" cy="130" r="112" fill="#f1f8ed" />
-      <path d="M54 102c-15 0-27 10-27 23s12 23 27 23h7l13 13v-15c5-5 8-12 8-21 0-13-12-23-28-23Z" fill="#d4efdf" stroke="#16845e" strokeWidth="3" />
-      <path d="M254 53c-13 0-23 8-23 19s10 19 23 19h8l12 11V88c4-4 6-9 6-16 0-11-11-19-26-19Z" fill="#fff" stroke="#16845e" strokeWidth="3" />
-      <path d="M252 172c14 0 25 9 25 20s-11 20-25 20h-7l-12 12v-15c-4-4-6-10-6-17 0-11 11-20 25-20Z" fill="#d4efdf" stroke="#16845e" strokeWidth="3" />
-      <rect x="112" y="43" width="96" height="174" rx="19" fill="#fff" stroke="#126b50" strokeWidth="5" />
-      <rect x="121" y="60" width="78" height="133" rx="9" fill="#f4faf5" />
-      <rect x="137" y="49" width="46" height="4" rx="2" fill="#126b50" />
-      <circle cx="160" cy="204" r="5" fill="#16845e" />
-      <path d="M132 91h42a10 10 0 0 1 10 10v13a10 10 0 0 1-10 10h-17l-11 9v-9h-14a10 10 0 0 1-10-10v-13a10 10 0 0 1 10-10Z" fill="#d4efdf" />
-      <path d="M148 143h39a9 9 0 0 1 9 9v12a9 9 0 0 1-9 9h-16l-10 8v-8h-13a9 9 0 0 1-9-9v-12a9 9 0 0 1 9-9Z" fill="#16845e" />
-      <path d="M158 150h20m-20 7h14" stroke="#fff" strokeLinecap="round" strokeWidth="3" />
-      <path d="M73 65c5-17 20-28 38-29-3 18-14 31-31 35m-3-7 22-17" fill="none" stroke="#16845e" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
-      <path d="M235 126c-4-15-17-24-33-25 2 16 12 27 27 30m3-6-19-15" fill="none" stroke="#16845e" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
-      <path d="m82 183 4 9 10 1-8 6 2 10-8-5-8 5 2-10-8-6 10-1 4-9Zm154-111 3 7 8 1-6 5 2 8-7-4-6 4 1-8-6-5 8-1 3-7Z" fill="#9bd8b1" />
-      <circle cx="95" cy="133" r="4" fill="#16845e" />
-      <circle cx="223" cy="157" r="4" fill="#16845e" />
-    </svg>
-  );
-}
-
-function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
-  return (
-    <main className="flex min-h-dvh items-start justify-center bg-[#edf5e4] p-0 text-ink sm:items-center sm:p-6">
-      <section className="flex min-h-dvh w-full max-w-md flex-col bg-white px-6 pb-7 pt-8 shadow-[0_20px_70px_-36px_rgba(18,107,80,0.34)] sm:min-h-[min(780px,calc(100dvh-3rem))] sm:rounded-[2rem] sm:px-10">
-        <div className="flex items-center justify-center gap-2.5">
-          <BrandMark size={34} />
-          <span className="text-base font-bold tracking-tight text-ink">{APP_NAME}</span>
-        </div>
-        <div className="flex flex-1 flex-col items-center justify-center py-5 text-center">
-          <h1 className="text-[1.65rem] font-semibold tracking-tight text-[#126b50]">Welcome to {APP_NAME}</h1>
-          <div className="my-5 h-[min(260px,34dvh)] w-full">
-            <WelcomeArtwork />
-          </div>
-          <p className="max-w-xs text-sm leading-6 text-ink-mute">
-            Good conversations bring us closer. Chat, share moments, and keep in touch with the people who matter.
-          </p>
-        </div>
-        <div className="space-y-4 text-center">
-          <p className="text-xs leading-5 text-ink-faint">
-            Your chats belong to you. You can manage your account and backup options in Settings.
-          </p>
-          <button
-            type="button"
-            onClick={onContinue}
-            className="w-full rounded-xl bg-[#087f5b] px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#066b4d] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#087f5b]/25"
-          >
-            Agree and continue
-          </button>
-          <p className="text-[11px] text-ink-faint">Private conversations. Meaningful connections.</p>
-        </div>
-      </section>
-    </main>
-  );
-}
+import WelcomeScreen from '@/components/WelcomeScreen';
 
 const inputCls =
   'w-full px-4 py-3.5 rounded-2xl bg-paper-mist border border-transparent focus:bg-white focus:border-brand-600/30 outline-none text-ink placeholder-ink-faint text-sm transition-colors';
@@ -286,7 +247,15 @@ export function AuthScreen() {
   };
 
   if (!welcomeAccepted) {
-    return <WelcomeScreen onContinue={() => setWelcomeAccepted(true)} />;
+    return (
+      <WelcomeScreen
+        onContinue={() => setWelcomeAccepted(true)}
+        onLinkDevice={() => {
+          setWelcomeAccepted(true);
+          setLoginMethod('device');
+        }}
+      />
+    );
   }
 
   return (
