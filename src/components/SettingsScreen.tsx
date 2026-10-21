@@ -5,6 +5,7 @@ import { api } from '@/lib/http';
 import { authenticateDevice, getDeviceContacts, getPushPermission, isNative, requestPushPermission } from '@/lib/native';
 import { initialsAvatar } from '@/lib/format';
 import { formatChatTime } from '@/lib/format';
+import LinkedDevicesScreen from '@/components/LinkedDevicesScreen';
 import {
   createSupportRequest,
   fetchArchivedChats,
@@ -40,6 +41,7 @@ import {
   Trash2,
   QrCode,
   Search,
+  Monitor,
 } from 'lucide-react';
 import type { Chat, SettingsContact, SettingsPreferences, StarredMessageItem, StorageUsage, UserProfile } from '@/types';
 import { secureSetItem } from '@/lib/secure';
@@ -90,6 +92,12 @@ export default function SettingsScreen({
   const [phoneChangePin, setPhoneChangePin] = useState('');
   const [phoneChangeDevCode, setPhoneChangeDevCode] = useState<string | null>(null);
   const [phoneChangePending, setPhoneChangePending] = useState(false);
+  const [emailInput, setEmailInput] = useState(authProfile?.email ?? '');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailDevCode, setEmailDevCode] = useState<string | null>(null);
+  const [emailVerificationPending, setEmailVerificationPending] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const pickAvatar = async (file?: File | null) => {
@@ -164,6 +172,46 @@ export default function SettingsScreen({
       showToast(error instanceof Error ? error.message : 'Could not update phone number');
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const sendEmailVerification = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setEmailError(null);
+    setEmailBusy(true);
+    try {
+      const response = await api<{ ok: boolean; dev_code?: string }>('/api/me/email/request', {
+        body: { email: emailInput.trim().toLowerCase() },
+      });
+      setEmailDevCode(response.dev_code ?? null);
+      setEmailCode('');
+      setEmailVerificationPending(true);
+      showToast('Verification code sent to your email');
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : 'Could not send the email code.');
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
+  const verifyEmailAddress = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setEmailError(null);
+    setEmailBusy(true);
+    try {
+      await api('/api/me/email/verify', {
+        body: { email: emailInput.trim().toLowerCase(), code: emailCode },
+      });
+      await refreshProfile();
+      setEmailVerificationPending(false);
+      setEmailDevCode(null);
+      setEmailCode('');
+      setActiveModal('personal-info');
+      showToast('Email verified and linked to your account');
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : 'Could not verify this email.');
+    } finally {
+      setEmailBusy(false);
     }
   };
 
@@ -423,6 +471,7 @@ export default function SettingsScreen({
         { icon: User, label: 'Personal Info', color: 'emerald', keywords: 'profile name bio phone photo', onClick: () => setActiveModal('personal-info') },
         { icon: Lock, label: 'Privacy', color: 'emerald', keywords: 'read receipts last seen disappearing messages', badge: 'Updated', onClick: () => setActiveModal('privacy') },
         { icon: Shield, label: 'Security & Encryption', color: 'emerald', keywords: 'two step verification pin device lock keys', onClick: () => setActiveModal('security') },
+        { icon: Monitor, label: 'Link an existing account', color: 'emerald', keywords: 'linked devices link device web browser computer qr code sessions', onClick: () => setActiveModal('linked-devices') },
         { icon: Users, label: 'Contacts', color: 'emerald', keywords: 'address book phone sync', onClick: () => void openSettingsSection('contacts') },
       ],
     },
@@ -468,6 +517,10 @@ export default function SettingsScreen({
         </div>
       )}
 
+      {activeModal === 'linked-devices' && (
+        <LinkedDevicesScreen onClose={() => setActiveModal(null)} />
+      )}
+
       {/* Header */}
       <div className="bg-paper px-4 pt-10 pb-4 flex-shrink-0">
         <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-700">Account center</p>
@@ -476,6 +529,23 @@ export default function SettingsScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto pb-6">
+        <label className="mx-4 mt-1 flex h-10 items-center gap-2.5 rounded-lg border border-paper-line bg-white px-3 text-ink-mute focus-within:border-brand-400">
+          <Search className="h-4 w-4 shrink-0 text-ink-faint" />
+          <input
+            type="search"
+            value={settingsQuery}
+            onChange={(event) => setSettingsQuery(event.target.value)}
+            placeholder="Search settings"
+            aria-label="Search settings"
+            className="min-w-0 flex-1 bg-transparent text-xs text-ink outline-none placeholder:text-ink-faint"
+          />
+          {settingsQuery && (
+            <button type="button" onClick={() => setSettingsQuery('')} className="text-[11px] font-semibold text-brand-700">
+              Clear
+            </button>
+          )}
+        </label>
+
         <div className="mx-4 mt-1 overflow-hidden rounded-2xl border border-paper-line bg-paper-mist">
           <button
             onClick={() => setActiveModal('edit-profile')}
@@ -527,23 +597,6 @@ export default function SettingsScreen({
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" />
         </button>
-
-        <label className="mx-4 mt-4 flex h-10 items-center gap-2.5 rounded-lg border border-paper-line bg-white px-3 text-ink-mute focus-within:border-brand-400">
-          <Search className="h-4 w-4 shrink-0 text-ink-faint" />
-          <input
-            type="search"
-            value={settingsQuery}
-            onChange={(event) => setSettingsQuery(event.target.value)}
-            placeholder="Search settings"
-            aria-label="Search settings"
-            className="min-w-0 flex-1 bg-transparent text-xs text-ink outline-none placeholder:text-ink-faint"
-          />
-          {settingsQuery && (
-            <button type="button" onClick={() => setSettingsQuery('')} className="text-[11px] font-semibold text-brand-700">
-              Clear
-            </button>
-          )}
-        </label>
 
         {visibleSettingSections.length ? visibleSettingSections.map((section) => (
           <section key={section.title} className="mt-4">
@@ -707,6 +760,22 @@ export default function SettingsScreen({
             <InfoRow label="Name" value={profile.name || 'Not set'} />
             <InfoRow label="About" value={profile.bio || 'Not set'} />
             <InfoRow label="Phone number" value={profile.phone || 'Not set'} />
+            <InfoRow
+              label="Sign-in email"
+              value={authProfile?.email_verified ? `${authProfile.email} · Verified` : 'Not linked'}
+            />
+            <button
+              onClick={() => {
+                setEmailInput(authProfile?.email ?? '');
+                setEmailCode('');
+                setEmailError(null);
+                setEmailVerificationPending(false);
+                setActiveModal('email-link');
+              }}
+              className="w-full rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-700"
+            >
+              {authProfile?.email_verified ? 'Change sign-in email' : 'Add a sign-in email'}
+            </button>
             <button
               onClick={() => setActiveModal('edit-profile')}
               className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white"
@@ -714,6 +783,84 @@ export default function SettingsScreen({
               Edit profile
             </button>
           </div>
+        </ModalWrapper>
+      )}
+
+      {activeModal === 'email-link' && (
+        <ModalWrapper
+          title={emailVerificationPending ? 'Verify email' : 'Add sign-in email'}
+          onClose={() => setActiveModal('personal-info')}
+        >
+          <form
+            onSubmit={(event) => void (emailVerificationPending ? verifyEmailAddress(event) : sendEmailVerification(event))}
+            className="space-y-4"
+          >
+            <p className="text-sm leading-5 text-ink-mute">
+              {emailVerificationPending
+                ? `Enter the 6-digit code sent to ${emailInput}.`
+                : 'Verify an email address to use it as an alternate way to sign in to this phone-linked account.'}
+            </p>
+            {!emailVerificationPending ? (
+              <div>
+                <label htmlFor="account-signin-email" className="text-xs font-semibold uppercase text-ink-mute">Email address</label>
+                <input
+                  id="account-signin-email"
+                  required
+                  type="email"
+                  autoComplete="email"
+                  maxLength={254}
+                  value={emailInput}
+                  onChange={(event) => setEmailInput(event.target.value)}
+                  placeholder="you@example.com"
+                  className="mt-1.5 w-full rounded-xl border border-paper-line bg-paper-mist px-3 py-2.5 text-sm text-ink outline-none focus:border-brand-500"
+                />
+              </div>
+            ) : (
+              <>
+                {emailDevCode && (
+                  <p className="text-sm text-amber-700">Dev code: <b>{emailDevCode}</b></p>
+                )}
+                <div>
+                  <label htmlFor="account-signin-email-code" className="text-xs font-semibold uppercase text-ink-mute">Email verification code</label>
+                  <input
+                    id="account-signin-email-code"
+                    required
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={emailCode}
+                    onChange={(event) => setEmailCode(event.target.value.replace(/\D/g, ''))}
+                    className="mt-1.5 w-full rounded-xl border border-paper-line bg-paper-mist px-3 py-2.5 text-center text-lg tracking-[0.3em] text-ink outline-none focus:border-brand-500"
+                  />
+                </div>
+              </>
+            )}
+            {emailError && <p role="alert" className="text-xs text-rose-600">{emailError}</p>}
+            <button
+              type="submit"
+              disabled={emailBusy || (emailVerificationPending && emailCode.length !== 6)}
+              className="w-full rounded-xl bg-brand-600 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+            >
+              {emailBusy
+                ? 'Please wait...'
+                : emailVerificationPending
+                  ? 'Verify email'
+                  : 'Send verification code'}
+            </button>
+            {emailVerificationPending && (
+              <button
+                type="button"
+                disabled={emailBusy}
+                onClick={() => {
+                  setEmailVerificationPending(false);
+                  setEmailError(null);
+                }}
+                className="w-full text-sm font-semibold text-brand-700 disabled:opacity-50"
+              >
+                Change email address
+              </button>
+            )}
+          </form>
         </ModalWrapper>
       )}
 

@@ -45,6 +45,8 @@ export interface UserProfile {
 export interface DbProfile {
   id: string;
   phone: string | null;
+  email: string | null;
+  email_verified: boolean;
   name: string;
   bio: string;
   avatar_url: string | null;

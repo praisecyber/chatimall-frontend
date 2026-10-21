@@ -40,8 +40,12 @@ export function formatDuration(secs: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/** Turns "+1 (555) 123-4567" into "+15551234567". Returns null if it isn't plausible. */
+/** Turns "+1 (555) 123-4567" into "15551234567". Accepts any international dialing code. */
 export function normalizePhone(input: string): string | null {
-  const cleaned = input.replace(/[\s()\-.]/g, '');
-  return /^\+\d{7,15}$/.test(cleaned) ? cleaned : null;
+  if (!input) return null;
+  const trimmed = input.trim();
+  const normalized = trimmed.startsWith('+') ? trimmed.slice(1) : trimmed;
+  const cleaned = normalized.replace(/[\s()\-.]/g, '');
+  const digits = cleaned.replace(/\D/g, '');
+  return digits.length >= 7 && digits.length <= 15 ? digits : null;
 }

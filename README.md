@@ -25,6 +25,16 @@ npm run lint                 # ESLint
 npm run preview              # Serve the built dist/ locally
 ```
 
+## Link a web or Android device
+
+On a device that is already signed in, open **Settings → Link an existing account** and scan the QR code shown on the device you want to add, or enter its 9-digit pairing code. Pairing requests expire after two minutes; up to five linked devices can be active at once. Unlink a device from the settings screen to revoke its sessions.
+
+Web QR scanning requires camera access and a secure context (HTTPS, or localhost). Android uses the ML Kit barcode scanner; the Google Barcode Scanner module may download the first time it is needed.
+
+## Alternate email sign-in
+
+After signing in with a phone number, open **Settings → Personal Info → Add a sign-in email** and verify the email address. A verified email can then receive a login code as an alternative to SMS for that same account. The backend must have an email delivery adapter configured; see the backend README for its webhook contract. Email sign-in does not create a separate account.
+
 ## Deploy → Vercel
 
 1. Push this repo to GitHub.

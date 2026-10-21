@@ -1,23 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Camera, Loader2, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, Mail, QrCode, RefreshCw, ShieldCheck, Smartphone } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { APP_NAME, APP_TAGLINE } from '@/brand';
 import BrandMark from '@/components/BrandMark';
 import { useAuth } from '@/lib/auth';
-import { ApiError } from '@/lib/http';
+import { ApiError, api } from '@/lib/http';
 import { initialsAvatar, normalizePhone } from '@/lib/format';
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="min-h-screen w-full wc-vine flex flex-col items-center justify-center p-4 text-ink">
-      <div className="flex items-center gap-2.5 mb-7">
-        <BrandMark size={40} />
-        <div className="leading-tight">
-          <div className="font-extrabold text-lg tracking-tight text-ink">{APP_NAME}</div>
-          <div className="text-[11px] text-brand-700 font-medium">{APP_TAGLINE}</div>
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#f5f7f5] px-4 py-8 text-ink">
+      <div className="pointer-events-none absolute -left-24 -top-28 h-72 w-72 rounded-full bg-brand-600/[0.06] blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-36 -right-24 h-80 w-80 rounded-full bg-brand-600/[0.05] blur-3xl" />
+      <div className={`relative z-10 flex w-full ${wide ? 'max-w-4xl' : 'max-w-md'} flex-col items-center`}>
+        <div className="mb-6 flex items-center gap-3">
+          <BrandMark size={42} />
+          <div className="leading-tight">
+            <div className="text-lg font-extrabold tracking-tight text-ink">{APP_NAME}</div>
+            <div className="text-[11px] font-medium text-brand-700">{APP_TAGLINE}</div>
+          </div>
         </div>
-      </div>
-      <div className="w-full max-w-md bg-white rounded-3xl p-7 shadow-lift ring-1 ring-black/[0.03]">
-        {children}
+        <div className="w-full rounded-2xl border border-black/[0.04] bg-white p-6 shadow-[0_16px_48px_-24px_rgba(15,23,42,0.24)] sm:p-8">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -30,23 +35,78 @@ const btnCls =
 
 /** Phone number → OTP code (verified by the Chatimall server). */
 export function AuthScreen() {
-  const { requestOtp, verifyOtp } = useAuth();
+  const { requestOtp, verifyOtp, requestEmailOtp, verifyEmailOtp, completeLinkedSignIn } = useAuth();
   const [devCode, setDevCode] = useState<string | null>(null);
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'email' | 'device'>('phone');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phoneInput, setPhoneInput] = useState('');
   const [phone, setPhone] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [pin, setPin] = useState('');
   const [secondFactorRequired, setSecondFactorRequired] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [linkChallenge, setLinkChallenge] = useState<{ link_id: string; secret: string; pairing_code: string } | null>(null);
 
   useEffect(() => {
     if (cooldown <= 0) return;
     const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [cooldown]);
+
+  useEffect(() => {
+    if (loginMethod !== 'device' || linkChallenge) return;
+    let active = true;
+    setError(null);
+    void api<{ link_id: string; secret: string; pairing_code: string }>('/api/devices/link/start', {
+      body: { platform: 'web' },
+    }).then((challenge) => {
+      if (active) setLinkChallenge(challenge);
+    }).catch((err: unknown) => {
+      if (active) setError(err instanceof Error ? err.message : 'Could not start device linking.');
+    });
+    return () => {
+      active = false;
+    };
+  }, [loginMethod, linkChallenge]);
+
+  useEffect(() => {
+    if (loginMethod !== 'device' || !linkChallenge) return;
+    let active = true;
+    let polling = false;
+    let terminal = false;
+    const poll = async () => {
+      if (!active || polling || terminal) return;
+      polling = true;
+      try {
+        const result = await api<{ status: 'pending' | 'approved' | 'completed' | 'expired'; token?: string }>(
+          '/api/devices/link/status',
+          { body: { link_id: linkChallenge.link_id, secret: linkChallenge.secret } }
+        );
+        if (!active) return;
+        if (result.status === 'expired' || result.status === 'completed') {
+          terminal = true;
+          setError('This QR code has expired. Generate a new code to try again.');
+        } else if (result.status === 'approved' && result.token) {
+          terminal = true;
+          await completeLinkedSignIn(result.token, linkChallenge.link_id);
+        }
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Could not check the linking request.');
+      } finally {
+        polling = false;
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 2000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [loginMethod, linkChallenge, completeLinkedSignIn]);
 
   const sendCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -71,6 +131,30 @@ export function AuthScreen() {
     setBusy(false);
   };
 
+  const sendEmailCode = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setError(null);
+    const normalized = emailInput.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      setError('Enter a valid email address.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await requestEmailOtp(normalized);
+      setDevCode(res.devCode ?? null);
+      setEmail(normalized);
+      setPin('');
+      setSecondFactorRequired(false);
+      setLoginMethod('email');
+      setStep('otp');
+      setCooldown(30);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send the email code.');
+    }
+    setBusy(false);
+  };
+
   const verify = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -80,7 +164,11 @@ export function AuthScreen() {
     }
     setBusy(true);
     try {
-      await verifyOtp(phone, code.trim(), secondFactorRequired ? pin : undefined);
+      if (loginMethod === 'email') {
+        await verifyEmailOtp(email, code.trim(), secondFactorRequired ? pin : undefined);
+      } else {
+        await verifyOtp(phone, code.trim(), secondFactorRequired ? pin : undefined);
+      }
       // on success the auth context takes over and the app opens
     } catch (err) {
       if (err instanceof ApiError && err.code === 'SECOND_FACTOR_REQUIRED') {
@@ -97,13 +185,54 @@ export function AuthScreen() {
   };
 
   return (
-    <Shell>
-      {step === 'phone' ? (
+    <Shell wide={loginMethod === 'device'}>
+      {step === 'phone' && (
+        <div className="mx-auto mb-6 grid w-full max-w-xl grid-cols-3 gap-1 rounded-xl bg-paper-mist p-1" role="group" aria-label="Choose sign-in method">
+          <button
+            type="button"
+            aria-pressed={loginMethod === 'phone'}
+            onClick={() => {
+              setLoginMethod('phone');
+              setLinkChallenge(null);
+              setError(null);
+            }}
+            className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-semibold transition-colors sm:text-sm ${loginMethod === 'phone' ? 'bg-white text-brand-700 shadow-sm' : 'text-ink-mute hover:text-ink'}`}
+          >
+            <Smartphone className="h-4 w-4 shrink-0" /> Phone
+          </button>
+          <button
+            type="button"
+            aria-pressed={loginMethod === 'email'}
+            onClick={() => {
+              setLoginMethod('email');
+              setLinkChallenge(null);
+              setError(null);
+            }}
+            className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-semibold transition-colors sm:text-sm ${loginMethod === 'email' ? 'bg-white text-brand-700 shadow-sm' : 'text-ink-mute hover:text-ink'}`}
+          >
+            <Mail className="h-4 w-4 shrink-0" /> Email
+          </button>
+          <button
+            type="button"
+            aria-pressed={loginMethod === 'device'}
+            onClick={() => {
+              setLoginMethod('device');
+              setLinkChallenge(null);
+              setError(null);
+            }}
+            className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-semibold transition-colors sm:text-sm ${loginMethod === 'device' ? 'bg-white text-brand-700 shadow-sm' : 'text-ink-mute hover:text-ink'}`}
+          >
+            <QrCode className="h-4 w-4 shrink-0" /> Link device
+          </button>
+        </div>
+      )}
+
+      {step === 'phone' && loginMethod === 'phone' ? (
         <form onSubmit={sendCode} className="space-y-4">
           <div>
-            <h1 className="text-xl font-bold">Your phone number</h1>
-            <p className="text-sm text-ink-mute mt-1">
-              We will send a verification code. Include your country code.
+            <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-mute">
+              Enter your phone number to securely sign in to Chatimall.
             </p>
           </div>
           <input
@@ -117,9 +246,80 @@ export function AuthScreen() {
           />
           {error && <p className="text-xs text-rose-600">{error}</p>}
           <button type="submit" disabled={busy} className={btnCls}>
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />} Send code
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />} Continue
           </button>
         </form>
+      ) : step === 'phone' && loginMethod === 'email' ? (
+        <form onSubmit={sendEmailCode} className="space-y-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Sign in with email</h1>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-mute">
+              Enter a verified email linked to an existing Chatimall account. If it matches, we’ll send a sign-in code.
+            </p>
+          </div>
+          <input
+            autoFocus
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={emailInput}
+            onChange={(event) => setEmailInput(event.target.value)}
+            className={inputCls}
+          />
+          {error && <p className="text-xs text-rose-600">{error}</p>}
+          <button type="submit" disabled={busy} className={btnCls}>
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />} Send email code
+          </button>
+        </form>
+      ) : step === 'phone' && loginMethod === 'device' ? (
+        <div className="mx-auto grid w-full max-w-3xl items-center gap-8 md:grid-cols-[1fr_auto] md:gap-12">
+          <div className="space-y-5">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Link Chatimall to your phone</h1>
+              <p className="mt-2 text-sm leading-relaxed text-ink-mute">
+                Open Chatimall on your phone, go to Settings, and link this desktop using the QR code or the code below.
+              </p>
+            </div>
+            <ol className="space-y-3 text-sm text-ink-soft">
+              <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">1</span><span>Open <b>Settings → Link an existing account</b> on your phone.</span></li>
+              <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">2</span><span>Scan this QR code, or choose code entry and type the code shown here.</span></li>
+              <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">3</span><span>Approve the request on your phone. This page will sign in automatically.</span></li>
+            </ol>
+            {linkChallenge && (
+              <div className="rounded-xl border border-paper-line bg-paper-mist px-4 py-3 text-center md:text-left">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-mute">Or enter this code on your phone</p>
+                <p className="mt-1 font-mono text-2xl font-bold tracking-[0.25em] text-ink">{linkChallenge.pairing_code}</p>
+              </div>
+            )}
+            {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
+            {(!linkChallenge || error?.includes('expired')) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLinkChallenge(null);
+                  setError(null);
+                }}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800"
+              >
+                <RefreshCw className="h-4 w-4" /> Generate a new code
+              </button>
+            )}
+          </div>
+          <div className="mx-auto flex min-h-64 w-full max-w-64 items-center justify-center rounded-2xl border border-paper-line bg-white p-4 shadow-sm">
+            {linkChallenge ? (
+              <QRCodeSVG
+                value={`chatimall://device-link?link_id=${encodeURIComponent(linkChallenge.link_id)}&secret=${encodeURIComponent(linkChallenge.secret)}`}
+                size={224}
+                level="M"
+                title="QR code to link this desktop"
+              />
+            ) : error ? (
+              <div className="text-center text-sm text-ink-mute"><QrCode className="mx-auto mb-2 h-7 w-7 text-brand-600" />Unable to load a linking code.</div>
+            ) : (
+              <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+            )}
+          </div>
+        </div>
       ) : (
         <form onSubmit={verify} className="space-y-4">
           <button
@@ -133,11 +333,13 @@ export function AuthScreen() {
             }}
             className="flex items-center gap-1 text-xs text-ink-mute hover:text-ink"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Change number
+            <ArrowLeft className="w-3.5 h-3.5" /> Change {loginMethod === 'email' ? 'email' : 'number'}
           </button>
           <div>
             <h1 className="text-xl font-bold">Enter the code</h1>
-            <p className="text-sm text-ink-mute mt-1">Sent to +{phone.replace(/^\+/, '')}</p>
+            <p className="text-sm text-ink-mute mt-1">
+              {loginMethod === 'email' ? `If verified, the code was sent to ${email}` : `Sent to +${phone.replace(/^\+/, '')}`}
+            </p>
             {devCode && (
               <p className="text-xs text-amber-700 mt-2">Dev mode: your code is <b className="tabular-nums">{devCode}</b></p>
             )}
@@ -174,7 +376,7 @@ export function AuthScreen() {
           <button
             type="button"
             disabled={cooldown > 0 || busy}
-            onClick={() => sendCode()}
+            onClick={() => (loginMethod === 'email' ? sendEmailCode() : sendCode())}
             className="w-full text-xs text-brand-600 disabled:text-gray-500"
           >
             {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
@@ -182,7 +384,7 @@ export function AuthScreen() {
         </form>
       )}
       <div className="mt-6 flex items-center gap-2 text-[11px] text-ink-faint">
-        <ShieldCheck className="w-3.5 h-3.5 text-brand-600" /> Your number is only used to sign you in and let friends find you.
+        <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-brand-600" /> Your sign-in details are protected and used only to access your account.
       </div>
     </Shell>
   );

@@ -13,6 +13,9 @@ interface AuthValue {
   /** Sends the SMS code. In dev mode the server may return the code (dev_code). */
   requestOtp: (phone: string) => Promise<{ devCode?: string }>;
   verifyOtp: (phone: string, code: string, pin?: string) => Promise<void>;
+  requestEmailOtp: (email: string) => Promise<{ devCode?: string }>;
+  verifyEmailOtp: (email: string, code: string, pin?: string) => Promise<void>;
+  completeLinkedSignIn: (token: string, linkId: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (patch: Partial<Pick<DbProfile, 'name' | 'bio' | 'avatar_url'>>) => Promise<void>;
   uploadAvatar: (file: File) => Promise<string>;
@@ -63,6 +66,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     connectSocket();
   }, []);
 
+  const requestEmailOtp = useCallback(async (email: string) => {
+    const res = await api<{ ok: boolean; dev_code?: string }>('/api/auth/email/otp/request', { body: { email } });
+    return { devCode: res.dev_code };
+  }, []);
+
+  const verifyEmailOtp = useCallback(async (email: string, code: string, pin?: string) => {
+    const res = await api<{ token: string; user: DbProfile }>('/api/auth/email/otp/verify', {
+      body: { email, code, ...(pin ? { pin } : {}) },
+    });
+    setToken(res.token);
+    setProfile(fixProfile(res.user));
+    void publishPublicKey().catch(() => {});
+    connectSocket();
+  }, []);
+
+  const completeLinkedSignIn = useCallback(async (token: string, linkId: string) => {
+    setLoading(true);
+    setToken(token);
+    try {
+      const linkedProfile = fixProfile(await api<DbProfile>('/api/me'));
+      await api('/api/devices/link/complete', { body: { link_id: linkId } });
+      setProfile(linkedProfile);
+      void publishPublicKey().catch(() => {});
+      connectSocket();
+    } catch (error) {
+      setToken(null);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const refreshProfile = useCallback(async () => {
     if (!getToken()) return;
     setProfile(fixProfile(await api<DbProfile>('/api/me')));
@@ -80,6 +115,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    try {
+      await api('/api/devices/linked/current', { method: 'DELETE' });
+    } catch (error) {
+      console.warn('Could not revoke the linked-device session during sign out', error);
+    }
     clear();
   }, [clear]);
 
@@ -90,12 +130,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       requestOtp,
       verifyOtp,
+      requestEmailOtp,
+      verifyEmailOtp,
+      completeLinkedSignIn,
       refreshProfile,
       updateProfile,
       uploadAvatar,
       signOut,
     }),
-    [profile, loading, requestOtp, verifyOtp, refreshProfile, updateProfile, uploadAvatar, signOut]
+    [profile, loading, requestOtp, verifyOtp, requestEmailOtp, verifyEmailOtp, completeLinkedSignIn, refreshProfile, updateProfile, uploadAvatar, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
