@@ -53,7 +53,6 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
                 <a href="#why" className="pc-nav-link">Why {APP_NAME}</a>
                 <a href="#little" className="pc-nav-link">The little things</a>
                 <a href="#faq" className="pc-nav-link">FAQ</a>
-                <a href="#preview-loading" className="pc-nav-link" style={{ opacity: 0.85 }}>Loading Preview</a>
               </div>
 
               <div className="pc-nav-right">
@@ -95,9 +94,6 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
                 </a>
                 <a href="#faq" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>
                   FAQ
-                </a>
-                <a href="#preview-loading" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>
-                  Preview Loading Screen
                 </a>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '10px', marginTop: '4px', borderTop: '1px solid rgba(15, 31, 23, 0.08)' }}>
                   <button

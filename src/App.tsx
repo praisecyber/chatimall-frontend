@@ -5,99 +5,21 @@ import MobileApp from '@/components/MobileApp';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { CallProvider } from '@/lib/calls';
 import { isNative, unregisterPush } from '@/lib/native';
-import { AuthScreen, ProfileSetup } from '@/components/AuthScreen';
-import AppLoadingScreen from '@/components/AppLoadingScreen';
-import AppLoadingScreenPreview from '@/components/AppLoadingScreenPreview';
-import { getToken } from '@/lib/http';
+import { AuthScreen, ProfileSetup, FullScreenSpinner } from '@/components/AuthScreen';
 import type { Screen, Chat } from '@/types';
 
 type View = 'landing' | 'app';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { userId, profile, loading } = useAuth();
-  const [initialLoadingComplete, setInitialLoadingComplete] = useState(() => !getToken());
-  const [isFinishingSetup, setIsFinishingSetup] = useState(false);
-  const [setupLoadingComplete, setSetupLoadingComplete] = useState(false);
-  const [prevUserId, setPrevUserId] = useState<string | null>(() => (getToken() ? 'init' : null));
-  const [justSignedIn, setJustSignedIn] = useState(false);
-  const [signInLoadingComplete, setSignInLoadingComplete] = useState(false);
-
-  useEffect(() => {
-    if (!prevUserId && userId && profile?.name) {
-      setJustSignedIn(true);
-      setSignInLoadingComplete(false);
-    }
-    setPrevUserId(userId);
-  }, [userId, profile?.name, prevUserId]);
-
-  // 1. Existing user launching app normally after splash screen
-  if (getToken() && !initialLoadingComplete) {
-    return (
-      <AppLoadingScreen
-        mode="launch"
-        isReady={!loading && Boolean(userId && profile?.name)}
-        onComplete={() => setInitialLoadingComplete(true)}
-      />
-    );
-  }
-
-  // 2. Auth session verification in progress
-  if (loading) {
-    return <AppLoadingScreen mode="launch" isReady={false} />;
-  }
-
-  // 3. First-time creating account / not signed in: Welcome screen + Auth flow
-  if (!userId || !profile) {
-    return <AuthScreen />;
-  }
-
-  // 4. Incomplete profile setup (requires name and optional avatar)
-  if (!profile.name && !setupLoadingComplete) {
-    return <ProfileSetup onComplete={() => setIsFinishingSetup(true)} />;
-  }
-
-  // 5. Finishing account creation loading page transition
-  if (isFinishingSetup && !setupLoadingComplete) {
-    return (
-      <AppLoadingScreen
-        mode="setup"
-        isReady={true}
-        onComplete={() => {
-          setIsFinishingSetup(false);
-          setSetupLoadingComplete(true);
-        }}
-      />
-    );
-  }
-
-  // 6. Just signed in with existing account loading transition
-  if (justSignedIn && !signInLoadingComplete) {
-    return (
-      <AppLoadingScreen
-        mode="launch"
-        isReady={true}
-        customTitle="Welcome Back"
-        onComplete={() => setSignInLoadingComplete(true)}
-      />
-    );
-  }
-
-  // 7. Normal app usage
+  if (loading) return <FullScreenSpinner />;
+  if (!userId || !profile) return <AuthScreen />;
+  if (!profile.name) return <ProfileSetup />;
   return <>{children}</>;
 }
 
-
 function App() {
   const { signOut } = useAuth();
-  const [previewLoading, setPreviewLoading] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash.toLowerCase();
-      const params = new URLSearchParams(window.location.search);
-      return hash === '#preview-loading' || params.get('preview') === 'loading';
-    }
-    return false;
-  });
-
   const [view, setView] = useState<View>(() => {
     if (isNative()) return 'app'; // the Android app skips the marketing page
     if (typeof window !== 'undefined') {
@@ -124,13 +46,9 @@ function App() {
   useEffect(() => {
     const handleHash = () => {
       if (isNative()) return;
-      if (window.location.hash === '#preview-loading') {
-        setPreviewLoading(true);
-      } else if (window.location.hash === '#app') {
-        setPreviewLoading(false);
+      if (window.location.hash === '#app') {
         setView('app');
       } else if (window.location.hash === '' || window.location.hash === '#top') {
-        setPreviewLoading(false);
         setView('landing');
       }
     };
@@ -147,7 +65,6 @@ function App() {
 
   const backToLanding = () => {
     window.location.hash = '';
-    setPreviewLoading(false);
     if (!isNative()) setView('landing');
   };
 
@@ -157,10 +74,6 @@ function App() {
     setActiveChat(null);
     backToLanding();
   };
-
-  if (previewLoading) {
-    return <AppLoadingScreenPreview onClose={backToLanding} />;
-  }
 
   if (view === 'landing') {
     return <LandingPage onDownload={openApp} />;

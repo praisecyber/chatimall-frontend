@@ -88,7 +88,6 @@ function Shell({ children, wide = false }: { children: React.ReactNode; wide?: b
 }
 
 import WelcomeScreen from '@/components/WelcomeScreen';
-import AppLoadingScreen from '@/components/AppLoadingScreen';
 
 const inputCls =
   'w-full px-4 py-3.5 rounded-2xl bg-paper-mist border border-transparent focus:bg-white focus:border-brand-600/30 outline-none text-ink placeholder-ink-faint text-sm transition-colors';
@@ -539,6 +538,10 @@ export function ProfileSetup({ onComplete }: { onComplete?: () => void }) {
 }
 
 export function FullScreenSpinner() {
-  return <AppLoadingScreen mode="launch" isReady={false} />;
+  return (
+    <div className="min-h-screen bg-paper-deep flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-brand-600 animate-spin" />
+    </div>
+  );
 }
 
