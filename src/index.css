@@ -313,15 +313,21 @@
 }
 
 .pc-menu-button {
-  border: 1px solid var(--pc-line);
-  color: var(--pc-cream);
-  border-radius: 999px;
-  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 8px 10px;
   display: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.08);
   cursor: pointer;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.pc-menu-button:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .pc-mobile-menu {
@@ -1289,9 +1295,9 @@
 }
 
 /* ---- Responsive ---- */
-@media (max-width: 960px) {
+@media (max-width: 1024px) {
   .pc-container {
-    width: min(100% - 36px, 640px);
+    width: min(100% - 36px, 760px);
   }
 
   .pc-nav {
@@ -1307,7 +1313,13 @@
   }
 
   .pc-menu-button {
-    display: flex;
+    display: inline-flex;
+  }
+
+  @media (max-width: 640px) {
+    .pc-nav-right .pc-button-secondary {
+      display: none;
+    }
   }
 
   .pc-mobile-menu {
@@ -1542,14 +1554,40 @@ body {
 }
 
 .pc-theme-milk .pc-menu-button {
-  border-color: rgba(24, 20, 38, 0.15);
-  color: #181426;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.pc-theme-milk .pc-menu-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .pc-theme-milk .pc-mobile-menu {
   background: #ffffff;
-  border-color: rgba(24, 20, 38, 0.08);
-  box-shadow: 0 20px 50px rgba(24, 20, 38, 0.12);
+  border: 1px solid rgba(15, 31, 23, 0.12);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.pc-theme-milk .pc-mobile-menu .pc-nav-link {
+  color: #111111;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 12px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  display: block;
+  transition: all 0.18s ease;
+}
+
+.pc-theme-milk .pc-mobile-menu .pc-nav-link:hover {
+  background: #F4FAF6;
+  color: #0F8A5F;
 }
 
 .pc-theme-milk .pc-mobile-theme-row {

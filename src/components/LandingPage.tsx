@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { APP_NAME } from '@/brand';
 import {
   X,
+  Menu,
   Download,
-
   Heart,
   Plus,
   ChevronDown,
@@ -20,12 +20,12 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
   useEffect(() => {
     let scrollEndTimer = 0;
     const onScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 10);
       setIsScrolling(true);
       window.clearTimeout(scrollEndTimer);
       scrollEndTimer = window.setTimeout(() => setIsScrolling(false), 360);
     };
-    window.addEventListener('scroll', onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       window.clearTimeout(scrollEndTimer);
       window.removeEventListener('scroll', onScroll);
@@ -53,6 +53,7 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
                 <a href="#why" className="pc-nav-link">Why {APP_NAME}</a>
                 <a href="#little" className="pc-nav-link">The little things</a>
                 <a href="#faq" className="pc-nav-link">FAQ</a>
+                <a href="#preview-loading" className="pc-nav-link" style={{ opacity: 0.85 }}>Loading Preview</a>
               </div>
 
               <div className="pc-nav-right">
@@ -70,8 +71,13 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
                   className="pc-menu-button"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   aria-label="Toggle navigation menu"
+                  aria-expanded={mobileMenuOpen}
                 >
-                  <ChevronDown className="w-4 h-4" />
+                  {mobileMenuOpen ? (
+                    <X className="w-5 h-5 text-white" />
+                  ) : (
+                    <Menu className="w-5 h-5 text-white" />
+                  )}
                 </button>
               </div>
             </nav>
@@ -81,17 +87,49 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
           {mobileMenuOpen && (
             <div className="pc-container" style={{ position: 'relative' }}>
               <div className="pc-mobile-menu">
-                <a href="#why" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Why {APP_NAME}</a>
-                <a href="#little" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>The little things</a>
-                <a href="#faq" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>FAQ</a>
-                <button onClick={openInstall} className="pc-button pc-nav-cta" style={{ width: 'fit-content' }}>
-                  Get the app
-                  <ArrowUpRight className="w-4 h-4 ml-1" />
-                </button>
+                <a href="#why" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>
+                  Why {APP_NAME}
+                </a>
+                <a href="#little" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>
+                  The little things
+                </a>
+                <a href="#faq" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>
+                  FAQ
+                </a>
+                <a href="#preview-loading" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>
+                  Preview Loading Screen
+                </a>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '10px', marginTop: '4px', borderTop: '1px solid rgba(15, 31, 23, 0.08)' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      openInstall();
+                    }}
+                    className="pc-button pc-button-secondary"
+                    style={{ width: '100%', justifyContent: 'center' }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onDownload();
+                    }}
+                    className="pc-button pc-nav-cta"
+                    style={{ width: '100%', justifyContent: 'center' }}
+                  >
+                    Open Web App
+                    <ArrowUpRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           )}
         </header>
+
 
         {/* Hero Section */}
         <section className="pc-hero" id="top">

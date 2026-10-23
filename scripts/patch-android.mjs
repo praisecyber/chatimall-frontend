@@ -31,6 +31,15 @@ console.log(`AndroidManifest.xml patched (${added} entries added).`);
 
 const gs = path.join('android', 'app', 'google-services.json');
 if (!fs.existsSync(gs)) {
-  console.warn('\nNOTE: android/app/google-services.json is missing. The app will build, but push notifications');
-  console.warn('will not work until you add it (see ANDROID.md, step 3).');
+  if (fs.existsSync('google-services.json')) {
+    fs.copyFileSync('google-services.json', gs);
+    console.log('Copied google-services.json into android/app/google-services.json.');
+  } else if (fs.existsSync('../google-services.json')) {
+    fs.copyFileSync('../google-services.json', gs);
+    console.log('Copied ../google-services.json into android/app/google-services.json.');
+  } else {
+    console.warn('\nNOTE: android/app/google-services.json is missing. The app will build, but push notifications');
+    console.warn('will not work until you add it (see ANDROID.md, step 3).');
+  }
 }
+

@@ -21,13 +21,18 @@ import {
   Loader2,
   ShieldCheck,
   X,
+  Sparkles,
+  Volume2,
 } from 'lucide-react';
-import type { Chat, DbMessage, Message } from '@/types';
+import type { Chat, DbMessage, Message, SettingsPreferences } from '@/types';
+import { api } from '@/lib/http';
 import { connectSocket } from '@/lib/socket';
 import { useAuth } from '@/lib/auth';
 import { fetchMessages, fetchPeerReadAt, fetchStarredMessages, fetchVoiceTranslation, mapMessage, markRead, sendMedia, sendText, setConversationArchived, setMessageStarred } from '@/lib/api';
 import { decryptMediaUrl, decryptMessageBody, getPeerKeyStatus, trustPeerKey } from '@/lib/e2ee';
 import { formatClock, formatDuration } from '@/lib/format';
+import { translateAudioWithGemini, speakTranslatedSpeech } from '@/lib/geminiVoiceTranslation';
+
 
 interface ChatConversationProps {
   chat: Chat;
@@ -107,7 +112,7 @@ export default function ChatConversation({
   onStartCall,
   wallpaper = 'default',
 }: ChatConversationProps) {
-  const { userId } = useAuth();
+  const { userId, profile } = useAuth();
   const [rows, setRows] = useState<DbMessage[]>([]);
   const [peerReadAt, setPeerReadAt] = useState<string | null>(null);
   const [peerTyping, setPeerTyping] = useState(false);
@@ -124,13 +129,56 @@ export default function ChatConversation({
   const [showConversationMenu, setShowConversationMenu] = useState(false);
   const [showSafetyCode, setShowSafetyCode] = useState(false);
   const [peerKeyStatus, setPeerKeyStatus] = useState<{ fingerprint: string; trusted: boolean } | null>(null);
-  // messageId -> translated spoken voice note URL, for received voice notes once this
-  // listener's translation (Settings > Voice Note Translation) has produced one. Never set for
-  // listeners with translation off — see useAutoVoiceTranslation above.
   const [translatedAudio, setTranslatedAudio] = useState<Record<string, string>>({});
+  const [geminiTranslations, setGeminiTranslations] = useState<
+    Record<string, { transcript: string; translatedText: string; sourceLanguage: string; loading?: boolean }>
+  >({});
   const [starredIds, setStarredIds] = useState<Set<string>>(() => new Set());
   const [updatingStarId, setUpdatingStarId] = useState<string | null>(null);
   const [archiving, setArchiving] = useState(false);
+
+  const [preferredLanguage, setPreferredLanguage] = useState(() => {
+    return localStorage.getItem('chatimall_translation_lang') || 'en';
+  });
+
+  useEffect(() => {
+    api<SettingsPreferences>('/api/me/settings')
+      .then((s) => {
+        if (s?.translation?.language) {
+          setPreferredLanguage(s.translation.language);
+          localStorage.setItem('chatimall_translation_lang', s.translation.language);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleTranslateVoiceWithAI = async (msg: Message) => {
+    if (!msg.mediaUrl) return;
+    setGeminiTranslations((prev) => ({
+      ...prev,
+      [msg.id]: { transcript: '', translatedText: '', sourceLanguage: '', loading: true },
+    }));
+    try {
+      const res = await fetch(msg.mediaUrl);
+      const blob = await res.blob();
+      const result = await translateAudioWithGemini(blob, preferredLanguage, msg.id);
+      setGeminiTranslations((prev) => ({
+        ...prev,
+        [msg.id]: { ...result, loading: false },
+      }));
+    } catch {
+      setGeminiTranslations((prev) => ({
+        ...prev,
+        [msg.id]: {
+          transcript: '',
+          translatedText: 'Could not translate voice note with AI.',
+          sourceLanguage: '',
+          loading: false,
+        },
+      }));
+    }
+  };
+
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const decryptedMediaUrlsRef = useRef<Map<string, string>>(new Map());
@@ -657,6 +705,72 @@ export default function ChatConversation({
                       </div>
                       <span className="text-[11px] tabular-nums opacity-80 ml-1">{msg.audioDuration || '0:00'}</span>
                     </div>
+                    {/* Gemini AI Voice Translation & Transcript */}
+                    <div className="mt-2 pt-1.5 border-t border-current/10 flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <button
+                          type="button"
+                          disabled={geminiTranslations[msg.id]?.loading}
+                          onClick={() => void handleTranslateVoiceWithAI(msg)}
+                          className={`inline-flex items-center gap-1 font-semibold transition-opacity disabled:opacity-50 ${
+                            msg.sent ? 'text-white/90 hover:text-white' : 'text-brand-700 hover:text-brand-800'
+                          }`}
+                        >
+                          <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span>
+                            {geminiTranslations[msg.id]?.loading
+                              ? 'AI Transcribing & Translating...'
+                              : geminiTranslations[msg.id]?.translatedText
+                              ? 'AI Translated'
+                              : 'Translate Voice Note'}
+                          </span>
+                        </button>
+
+                        {geminiTranslations[msg.id]?.translatedText && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              speakTranslatedSpeech(
+                                geminiTranslations[msg.id].translatedText,
+                                preferredLanguage
+                              )
+                            }
+                            className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                              msg.sent ? 'bg-white/20 text-white' : 'bg-brand-50 text-brand-700 border border-brand-200'
+                            }`}
+                          >
+                            <Volume2 className="w-3 h-3" />
+                            <span>Listen</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {geminiTranslations[msg.id]?.transcript && (
+                        <div
+                          className={`mt-1.5 p-2 rounded-xl text-xs space-y-1.5 ${
+                            msg.sent ? 'bg-black/20 text-white/95' : 'bg-paper-mist text-ink border border-paper-line'
+                          }`}
+                        >
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                              Transcript ({geminiTranslations[msg.id].sourceLanguage})
+                            </span>
+                            <p className="mt-0.5 leading-snug">{geminiTranslations[msg.id].transcript}</p>
+                          </div>
+                          {geminiTranslations[msg.id].translatedText && (
+                            <div className="pt-1 border-t border-current/10">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+                                Translation ({preferredLanguage.toUpperCase()})
+                              </span>
+                              <p className="mt-0.5 font-medium leading-snug">
+                                {geminiTranslations[msg.id].translatedText}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {!msg.sent && (
                       <AutoVoiceTranslation
                         conversationId={chat.id}
@@ -666,6 +780,7 @@ export default function ChatConversation({
                       />
                     )}
                   </div>
+
                 ) : msg.type === 'image' && msg.mediaUrl ? (
                   <a href={msg.mediaUrl} target="_blank" rel="noreferrer">
                     <img
