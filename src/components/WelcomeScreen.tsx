@@ -543,22 +543,24 @@ export function WelcomeScreen({
             <div className="overflow-y-auto py-4 text-xs text-ink-soft space-y-3 leading-relaxed">
               {activeModal === 'privacy' && (
                 <>
-                  <p className="font-semibold text-ink">Privacy is our core foundation:</p>
-                  <ul className="space-y-2 list-disc pl-4 text-ink-mute">
-                    <li><strong className="text-ink">End-to-End Encryption:</strong> Your personal voice notes, text messages, calls, and photos stay between you and the person you choose.</li>
-                    <li><strong className="text-ink">Zero Data Monetization:</strong> We never harvest your contact lists, sell telemetry, or inject advertisements.</li>
-                    <li><strong className="text-ink">Self-Custody:</strong> In Settings, you can create encrypted backups, manage paired devices, or delete your account at any time.</li>
-                  </ul>
+                  <p className="font-semibold text-ink">About your information</p>
+                  <p className="text-ink-mute">
+                    Chatimall handles account details and content you submit to provide messaging and community features. If you choose to sync device contacts, selected names and phone numbers are sent to our service to find people on Chatimall. End-to-end encryption applies to supported text messages only, not every feature or media type.
+                  </p>
+                  <a href="/privacy.html" className="font-medium text-brand-600 hover:text-brand-700 hover:underline">
+                    Read the full Privacy Policy
+                  </a>
                 </>
               )}
               {activeModal === 'terms' && (
                 <>
-                  <p className="font-semibold text-ink">Terms of Service summary:</p>
-                  <ul className="space-y-2 list-disc pl-4 text-ink-mute">
-                    <li><strong className="text-ink">Authentic Community:</strong> Chatimall is designed for genuine connections, voice notes, and groups. Spamming and abusive harassment are prohibited.</li>
-                    <li><strong className="text-ink">Account Safety:</strong> You are responsible for keeping your phone verification codes, security PIN, and device keys safe.</li>
-                    <li><strong className="text-ink">Real-time Uptime:</strong> We continuously upgrade network infrastructure for real-time synchronization.</li>
-                  </ul>
+                  <p className="font-semibold text-ink">Using Chatimall</p>
+                  <p className="text-ink-mute">
+                    Keep your account secure, respect other users, and do not use Chatimall for unlawful, abusive, or disruptive activity. You remain responsible for the content you share and the audience you choose.
+                  </p>
+                  <a href="/terms.html" className="font-medium text-brand-600 hover:text-brand-700 hover:underline">
+                    Read the full Terms of Service
+                  </a>
                 </>
               )}
               {activeModal === 'help' && (
