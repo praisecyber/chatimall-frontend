@@ -56,3 +56,24 @@ needs the Android SDK), so this one check matters.
 ## 6. Calls on mobile data
 Add a TURN server in `.env` (see `.env.example`), rebuild, and test a call between two phones on
 different networks. Without TURN, roughly one call in five between mobile networks can fail.
+
+## 7. TikTok Share Kit (Android)
+The Android app uses TikTok OpenSDK Share Kit to send a user-selected photo set or MP4 video to TikTok.
+Add the Android app signature and SHA-256 signing-certificate fingerprint to the TikTok **sandbox**
+app settings. The Android SDK is added from TikTok's official Maven repository; do not copy the SDK
+sample app or its credentials into Chatimall.
+
+For a local sandbox build, set `TIKTOK_CLIENT_KEY` in the same PowerShell session that builds the app:
+```powershell
+$env:TIKTOK_CLIENT_KEY = '<sandbox client key>'
+npm run android:sync
+npm run apk:debug
+```
+The key is embedded in the Android build and must not be a client secret. Do not put a TikTok client
+secret in the frontend or Android project. Configure the sandbox's Android platform with the signing
+fingerprints for the exact build you install on the phone; Play Store signing fingerprints are
+different from local debug fingerprints.
+
+In the Android app, open **Settings → TikTok account → Choose photos or video**. Choose at least two
+photos or one MP4 video, then complete or cancel the flow inside TikTok. Media is selected with
+Android's system picker and remains user-controlled.

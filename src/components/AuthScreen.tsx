@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Search,
   X,
   Zap,
 } from 'lucide-react';
@@ -28,6 +29,8 @@ import BrandMark from '@/components/BrandMark';
 import { useAuth } from '@/lib/auth';
 import { ApiError, api } from '@/lib/http';
 import { initialsAvatar, normalizePhone } from '@/lib/format';
+import { Country, COUNTRIES, DEFAULT_COUNTRY } from '@/lib/countries';
+import CountryFlag from '@/components/CountryFlag';
 
 function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
@@ -170,12 +173,52 @@ export function AuthScreen() {
     };
   }, [loginMethod, linkChallenge, completeLinkedSignIn]);
 
+  const [selectedCountry, setSelectedCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
+  const countryPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showCountryPicker) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (countryPickerRef.current && !countryPickerRef.current.contains(e.target as Node)) {
+        setShowCountryPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCountryPicker]);
+
+  const filteredCountries = useMemo(() => {
+    const q = countrySearch.trim().toLowerCase();
+    if (!q) return COUNTRIES;
+    return COUNTRIES.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.code.includes(q) ||
+        c.iso.toLowerCase().includes(q)
+    );
+  }, [countrySearch]);
+
   const sendCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
-    const normalized = normalizePhone(phoneInput);
+    const raw = phoneInput.trim();
+    if (!raw) {
+      setError('Enter your phone number to continue.');
+      return;
+    }
+
+    let fullNumber = raw;
+    if (!raw.startsWith('+')) {
+      // Strip leading 0 if present (e.g. 09121598033 -> 9121598033 with country code +234)
+      const national = raw.replace(/^0+/, '');
+      fullNumber = `${selectedCountry.code}${national}`;
+    }
+
+    const normalized = normalizePhone(fullNumber);
     if (!normalized) {
-      setError('Enter your number with country code, e.g. +15551234567');
+      setError(`Please enter a valid phone number for ${selectedCountry.name} (${selectedCountry.code}).`);
       return;
     }
     setBusy(true);
@@ -302,22 +345,112 @@ export function AuthScreen() {
       )}
 
       {step === 'phone' && loginMethod === 'phone' ? (
-        <form onSubmit={sendCode} className="space-y-4">
+        <form onSubmit={sendCode} className="space-y-5">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Create or sign in with phone</h1>
             <p className="mt-1.5 text-sm leading-relaxed text-ink-mute">
-              Enter your phone number to create your Chatimall account on first use or continue on this device.
+              Enter your phone number to create your Chatimall account or continue on this device.
             </p>
           </div>
-          <input
-            autoFocus
-            type="tel"
-            inputMode="tel"
-            placeholder="+1 555 123 4567"
-            value={phoneInput}
-            onChange={(e) => setPhoneInput(e.target.value)}
-            className={inputCls}
-          />
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-ink-soft">Country & Phone Number</label>
+            <div className="relative flex items-center rounded-2xl bg-paper-mist border border-black/[0.08] focus-within:border-brand-600/50 focus-within:bg-white focus-within:ring-4 focus-within:ring-brand-600/10 transition-all">
+              {/* Country Selector Trigger */}
+              <div className="relative" ref={countryPickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowCountryPicker((prev) => !prev)}
+                  className="flex items-center gap-1.5 px-3.5 py-3.5 text-sm font-semibold text-ink hover:bg-black/[0.04] active:bg-black/[0.08] rounded-l-2xl transition border-r border-black/[0.08] select-none"
+                  title="Select Country"
+                  aria-label={`Selected country: ${selectedCountry.name} (${selectedCountry.code})`}
+                >
+                  <CountryFlag country={selectedCountry} size="lg" />
+                  <span className="text-xs font-bold font-mono tracking-tight text-ink">{selectedCountry.code}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-ink-mute transition-transform duration-200 ${showCountryPicker ? 'rotate-180 text-brand-600' : ''}`} />
+                </button>
+
+                {/* Country Picker Popover Dropdown */}
+                {showCountryPicker && (
+                  <div className="absolute left-0 top-full mt-2 z-50 w-72 sm:w-80 max-h-84 rounded-2xl bg-white shadow-2xl border border-black/10 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                    <div className="p-2.5 border-b border-black/[0.06] bg-paper-mist/60">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-mute" />
+                        <input
+                          type="text"
+                          autoFocus
+                          value={countrySearch}
+                          onChange={(e) => setCountrySearch(e.target.value)}
+                          placeholder="Search country or code..."
+                          className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white border border-black/[0.08] focus:border-brand-600 outline-none text-ink placeholder-ink-faint shadow-inner"
+                        />
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto flex-1 divide-y divide-black/[0.03] max-h-60 p-1">
+                      {filteredCountries.map((country) => {
+                        const isSelected = selectedCountry.iso === country.iso && selectedCountry.code === country.code;
+                        return (
+                          <button
+                            key={`${country.iso}-${country.code}`}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCountry(country);
+                              setShowCountryPicker(false);
+                              setCountrySearch('');
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2 text-left rounded-xl transition text-xs ${
+                              isSelected ? 'bg-brand-50 text-brand-700 font-bold' : 'hover:bg-paper-mist text-ink'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 truncate">
+                              <CountryFlag country={country} size="md" />
+                              <span className="truncate">{country.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                              <span className="text-[11px] font-mono font-semibold text-ink-soft">{country.code}</span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-brand-600 shrink-0" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {filteredCountries.length === 0 && (
+                        <div className="py-6 text-center text-xs text-ink-mute">
+                          No matching country found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Local Phone Input */}
+              <input
+                autoFocus
+                type="tel"
+                inputMode="tel"
+                placeholder={selectedCountry.format || 'e.g. 912 159 8033'}
+                value={phoneInput}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // If user pasted a full international number starting with +
+                  if (val.startsWith('+')) {
+                    const match = COUNTRIES.find((c) => val.startsWith(c.code));
+                    if (match) {
+                      setSelectedCountry(match);
+                      setPhoneInput(val.slice(match.code.length).trim());
+                      return;
+                    }
+                  }
+                  setPhoneInput(val);
+                }}
+                className="flex-1 px-3.5 py-3.5 bg-transparent outline-none text-ink placeholder-ink-faint text-sm font-medium"
+              />
+            </div>
+            <p className="text-[11px] text-ink-mute">
+              Enter with or without leading zero (e.g. <span className="font-mono text-ink-soft">09121598033</span> or <span className="font-mono text-ink-soft">9121598033</span>).
+            </p>
+          </div>
+
           {error && <p className="text-xs text-rose-600">{error}</p>}
           <button type="submit" disabled={busy} className={btnCls}>
             {busy && <Loader2 className="w-4 h-4 animate-spin" />} Continue

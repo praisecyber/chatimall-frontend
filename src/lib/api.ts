@@ -1,7 +1,27 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { api, ApiError, assetUrl, storedUrl } from '@/lib/http';
 import { formatChatTime, formatDuration, initialsAvatar } from '@/lib/format';
-import type { Call, Channel, ChannelPost, Chat, DbMessage, SettingsContact, StarredMessageItem, StatusGroup, StatusItem, StorageUsage } from '@/types';
+import type {
+  AdminAnalytics,
+  AdminChannelItem,
+  AdminOverviewResponse,
+  AdminReportItem,
+  AdminRole,
+  AdminStaffNote,
+  AdminSystemSettings,
+  AdminUserActivity,
+  AdminUserItem,
+  Call,
+  Channel,
+  ChannelPost,
+  Chat,
+  DbMessage,
+  SettingsContact,
+  StarredMessageItem,
+  StatusGroup,
+  StatusItem,
+  StorageUsage,
+} from '@/types';
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const ONLINE_WINDOW_MS = 2 * 60 * 1000;
@@ -601,4 +621,154 @@ export async function deleteListing(listingId: string): Promise<void> {
 export async function requestToBuy(listingId: string): Promise<{ conversationId: string; starterMessage: string }> {
   const res = await api<{ conversation_id: string; starter_message: string }>(`/api/listings/${listingId}/request`, { body: {} });
   return { conversationId: res.conversation_id, starterMessage: res.starter_message };
+}
+
+/* ===================== ADMIN CONSOLE ===================== */
+export async function fetchAdminOverview(): Promise<AdminOverviewResponse> {
+  return api<AdminOverviewResponse>('/api/admin/overview');
+}
+
+export async function fetchAdminUsers(search = '', page = 1, limit = 25): Promise<{ total: number; users: AdminUserItem[] }> {
+  const query = new URLSearchParams({ search, page: String(page), limit: String(limit) });
+  const res = await api<{ ok: boolean; total: number; users: AdminUserItem[] }>(`/api/admin/users?${query.toString()}`);
+  return { total: res.total, users: res.users };
+}
+
+export async function toggleAdminUserSuspension(userId: string, suspended?: boolean): Promise<{ is_suspended: boolean }> {
+  return api<{ is_suspended: boolean }>(`/api/admin/users/${userId}/suspend`, {
+    method: 'PATCH',
+    body: { suspended },
+  });
+}
+
+export async function deleteAdminUser(userId: string): Promise<void> {
+  await api(`/api/admin/users/${userId}`, { method: 'DELETE' });
+}
+
+export async function fetchAdminChannels(search = ''): Promise<AdminChannelItem[]> {
+  const query = new URLSearchParams(search ? { search } : {});
+  const res = await api<{ ok: boolean; channels: AdminChannelItem[] }>(`/api/admin/channels?${query.toString()}`);
+  return res.channels;
+}
+
+export async function createAdminChannel(name: string, description?: string, avatarUrl?: string): Promise<AdminChannelItem> {
+  const res = await api<{ ok: boolean; channel: AdminChannelItem }>('/api/admin/channels', {
+    body: { name, description, avatar_url: avatarUrl },
+  });
+  return res.channel;
+}
+
+export async function deleteAdminChannel(channelId: string): Promise<void> {
+  await api(`/api/admin/channels/${channelId}`, { method: 'DELETE' });
+}
+
+export async function sendAdminBroadcast(title: string, message: string, channelId?: string): Promise<void> {
+  await api('/api/admin/broadcast', {
+    body: { title, message, channel_id: channelId },
+  });
+}
+
+export async function fetchAdminReports(): Promise<AdminReportItem[]> {
+  const res = await api<{ ok: boolean; reports: AdminReportItem[] }>('/api/admin/reports');
+  return res.reports;
+}
+
+export async function deleteAdminReportedMessage(messageId: string): Promise<void> {
+  await api(`/api/admin/reports/${messageId}`, { method: 'DELETE' });
+}
+
+export async function dismissAdminReport(messageId: string): Promise<void> {
+  await api(`/api/admin/reports/${messageId}/dismiss`, { method: 'POST' });
+}
+
+export async function actOnAdminReportedMessage(
+  messageId: string,
+  action: 'warn' | 'suspend_sender' | 'delete_message',
+  note?: string
+): Promise<void> {
+  await api(`/api/admin/reports/${messageId}/action`, {
+    body: { action, note },
+  });
+}
+
+export async function fetchAdminAnalytics(): Promise<AdminAnalytics> {
+  const res = await api<{ ok: boolean; analytics: AdminAnalytics }>('/api/admin/analytics');
+  return res.analytics;
+}
+
+export async function banAdminUser(
+  userId: string,
+  banned: boolean,
+  reason?: string
+): Promise<{ is_banned: boolean; ban_reason: string | null }> {
+  const res = await api<{ ok: boolean; is_banned: boolean; ban_reason: string | null }>(
+    `/api/admin/users/${userId}/ban`,
+    {
+      method: 'PATCH',
+      body: { banned, reason },
+    }
+  );
+  return { is_banned: res.is_banned, ban_reason: res.ban_reason };
+}
+
+export async function changeAdminUserRole(userId: string, role: AdminRole): Promise<{ role: AdminRole }> {
+  const res = await api<{ ok: boolean; role: AdminRole }>(`/api/admin/users/${userId}/role`, {
+    method: 'PATCH',
+    body: { role },
+  });
+  return { role: res.role };
+}
+
+export async function fetchAdminUserActivity(userId: string): Promise<AdminUserActivity> {
+  const res = await api<{ ok: boolean; activity: AdminUserActivity }>(`/api/admin/users/${userId}/activity`);
+  return res.activity;
+}
+
+export async function fetchAdminSettings(): Promise<AdminSystemSettings> {
+  const res = await api<{ ok: boolean; settings: AdminSystemSettings }>('/api/admin/settings');
+  return res.settings;
+}
+
+export async function updateAdminSettings(
+  settings: Partial<AdminSystemSettings>
+): Promise<AdminSystemSettings> {
+  const res = await api<{ ok: boolean; settings: AdminSystemSettings }>('/api/admin/settings', {
+    method: 'PATCH',
+    body: settings,
+  });
+  return res.settings;
+}
+
+export async function sendAdminUserMessage(
+  userId: string,
+  message: string
+): Promise<{ ok: boolean; message: string; messageId: string }> {
+  return api<{ ok: boolean; message: string; messageId: string }>(
+    `/api/admin/users/${userId}/message`,
+    {
+      method: 'POST',
+      body: { message },
+    }
+  );
+}
+
+export async function fetchAdminUserNotes(userId: string): Promise<AdminStaffNote[]> {
+  const res = await api<{ ok: boolean; notes: AdminStaffNote[] }>(
+    `/api/admin/users/${userId}/notes`
+  );
+  return res.notes || [];
+}
+
+export async function createAdminUserNote(
+  userId: string,
+  text: string
+): Promise<AdminStaffNote> {
+  const res = await api<{ ok: boolean; note: AdminStaffNote }>(
+    `/api/admin/users/${userId}/notes`,
+    {
+      method: 'POST',
+      body: { text },
+    }
+  );
+  return res.note;
 }

@@ -1,4 +1,4 @@
-export type Screen = 'chats' | 'status' | 'calls' | 'channels' | 'groups' | 'market' | 'settings';
+export type Screen = 'chats' | 'status' | 'calls' | 'channels' | 'groups' | 'market' | 'settings' | 'admin';
 
 export interface Chat {
   id: string;
@@ -47,6 +47,7 @@ export interface DbProfile {
   phone: string | null;
   email: string | null;
   email_verified: boolean;
+  is_admin?: boolean;
   name: string;
   bio: string;
   avatar_url: string | null;
@@ -239,4 +240,164 @@ export interface Listing {
   price: string;
   photoUrl: string | null;
   createdAt: string;
+}
+
+export interface AdminOverviewStats {
+  totalUsers: number;
+  totalConversations: number;
+  totalMessages: number;
+  totalChannels: number;
+  totalChannelPosts: number;
+  totalCalls: number;
+  totalListings: number;
+  totalDeviceTokens: number;
+  reportedMessagesCount: number;
+}
+
+export type AdminRole = 'super_admin' | 'moderator' | 'support_agent' | 'member';
+
+export interface AdminUserItem {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  bio: string;
+  last_seen: string;
+  is_suspended: boolean;
+  is_banned?: boolean;
+  ban_reason?: string | null;
+  role?: AdminRole;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export interface AdminChannelItem {
+  id: string;
+  name: string;
+  description: string;
+  avatar_url: string | null;
+  owner_id: string | null;
+  owner_name: string;
+  owner_phone: string | null;
+  subscribers: number;
+  posts_count: number;
+  has_gist_room: boolean;
+  created_at: string;
+}
+
+export interface AdminReportItem {
+  message_id: string;
+  conversation_id: string;
+  sender_id: string | null;
+  sender_name: string;
+  sender_phone: string | null;
+  type: string;
+  body: string;
+  media_url: string | null;
+  created_at: string;
+  reports: Array<{
+    reporter_name: string;
+    reporter_phone: string | null;
+    reason: string;
+    reported_at: string;
+  }>;
+}
+
+export interface AdminOverviewResponse {
+  ok: boolean;
+  stats: AdminOverviewStats;
+  recentUsers: AdminUserItem[];
+  recentChannels: Array<{
+    id: string;
+    name: string;
+    description: string;
+    avatar_url: string | null;
+    owner_name: string;
+    owner_phone: string | null;
+    created_at: string;
+  }>;
+  server: {
+    uptimeSeconds: number;
+    nodeVersion: string;
+    platform: string;
+    memoryMb: number;
+    heapUsedMb: number;
+  };
+}
+
+export interface DemographicUser {
+  id: string;
+  name: string;
+  phone: string;
+  avatar_url?: string | null;
+  role?: string;
+  is_suspended?: boolean;
+  is_banned?: boolean;
+  last_seen?: string;
+  created_at?: string;
+}
+
+export interface AdminDemographicItem {
+  region: string;
+  count: number;
+  dial?: string;
+  iso?: string;
+  flag?: string;
+  users?: DemographicUser[];
+}
+
+export interface AdminAnalytics {
+  activeUsers24h: number;
+  activeUsers7d: number;
+  totalUsers: number;
+  totalMessages: number;
+  totalCalls: number;
+  retentionRate: number;
+  hourlyActivity: Array<{ hour: number; label: string; messages: number }>;
+  dailyActivity: Array<{ date: string; count: number }>;
+  platforms: Array<{ platform: string; count: number }>;
+  demographics: AdminDemographicItem[];
+}
+
+export interface AdminSystemSettings {
+  fileSharingLimitMb: number;
+  voiceInputEnabled: boolean;
+  callsEnabled: boolean;
+  systemWelcomeMessage: string;
+  maintenanceMode: boolean;
+  maintenanceNotice: string;
+  bannedWords: string[];
+  notificationRules: {
+    quietHoursStart: string;
+    quietHoursEnd: string;
+    allowCriticalAlerts: boolean;
+  };
+  updatedAt?: string;
+}
+
+export interface AdminUserActivity {
+  userId: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  role: AdminRole;
+  isSuspended: boolean;
+  isBanned: boolean;
+  banReason: string | null;
+  messagesCount: number;
+  convsCount: number;
+  channelsCount: number;
+  reportsAgainst: number;
+  lastSeen: string;
+  registeredAt: string;
+}
+
+export interface AdminStaffNote {
+  id: string;
+  userId: string;
+  author: string;
+  date: string;
+  text: string;
+  createdAt?: string;
 }

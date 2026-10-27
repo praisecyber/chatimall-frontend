@@ -46,6 +46,9 @@ export function normalizePhone(input: string): string | null {
   const trimmed = input.trim();
   const normalized = trimmed.startsWith('+') ? trimmed.slice(1) : trimmed;
   const cleaned = normalized.replace(/[\s()\-.]/g, '');
-  const digits = cleaned.replace(/\D/g, '');
+  let digits = cleaned.replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('0')) {
+    digits = `234${digits.slice(1)}`;
+  }
   return digits.length >= 7 && digits.length <= 15 ? digits : null;
 }

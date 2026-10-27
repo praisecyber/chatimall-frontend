@@ -8,6 +8,7 @@ import {
   Store,
   Settings,
   Shield,
+  ShieldCheck,
 } from 'lucide-react';
 import type { Screen, Chat, Group } from '@/types';
 import { APP_NAME } from '@/brand';
@@ -28,6 +29,7 @@ import GroupsScreen from '@/components/GroupsScreen';
 import GroupChat from '@/components/GroupChat';
 import MarketplaceScreen from '@/components/MarketplaceScreen';
 import CallOverlay from '@/components/CallOverlay';
+import AdminPanel from '@/components/AdminPanel';
 
 interface MobileAppProps {
   screen: Screen;
@@ -56,8 +58,19 @@ export default function MobileApp({
   onLogout,
   isDesktopView = false,
 }: MobileAppProps) {
-  const { userId } = useAuth();
+  const { userId, profile } = useAuth();
   const { call, startCall } = useCall();
+
+  const normalizedPhone = (profile?.phone || '').replace(/\D/g, '');
+  const isAdmin = Boolean(
+    profile?.is_admin ||
+    ['09121598033', '2349121598033'].includes(normalizedPhone) ||
+    (normalizedPhone.startsWith('234') && normalizedPhone.endsWith('9121598033'))
+  );
+
+  const currentNavItems = isAdmin
+    ? [...navItems, { id: 'admin' as Screen, icon: ShieldCheck, label: 'Admin' }]
+    : navItems;
 
   // Global Chat Wallpaper setting
   const [activeWallpaper, setActiveWallpaper] = useState<string>('default');
@@ -109,18 +122,39 @@ export default function MobileApp({
     setLockError('Device authentication was not completed.');
   };
 
-  // Android app: register for push notifications; tapping one opens that chat.
+  // Android app: register for push notifications; tapping one opens that chat / group / channel.
   useEffect(() => {
     if (!userId) return;
     void registerPush(userId, (data) => {
-      if (!data.conversation_id) return;
-      void fetchChats().then((all) => {
-        const target = all.find((c) => c.id === data.conversation_id);
-        if (target) {
-          setScreen('chats');
-          setActiveChat(target);
-        }
-      });
+      const { type, conversation_id, group_id, channel_id } = data;
+
+      // Direct chat message
+      if (type === 'message' && conversation_id) {
+        void fetchChats().then((all) => {
+          const target = all.find((c) => c.id === conversation_id);
+          if (target) {
+            setScreen('chats');
+            setActiveChat(target);
+          }
+        });
+        return;
+      }
+
+      // Group message or anonymous vote
+      if ((type === 'group_message' || type === 'group_anon_vote') && group_id) {
+        // fetchGroups isn't imported here — navigate to the groups tab;
+        // GroupsScreen will show the right group when it mounts.
+        setScreen('groups');
+        return;
+      }
+
+      // Channel post
+      if (type === 'channel_post' && channel_id) {
+        setScreen('channels');
+        return;
+      }
+
+      // Incoming call — CallOverlay listens to the socket directly, nothing to do here.
     });
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -146,6 +180,15 @@ export default function MobileApp({
     void startCall({ id: chat.otherUserId, name: chat.name, avatar: chat.avatar }, type);
   };
 
+  // Dedicated Admin Console View
+  if (screen === 'admin') {
+    return (
+      <div className="flex flex-col h-full bg-paper-tint text-ink relative overflow-hidden select-none">
+        <AdminPanel onBack={() => setScreen('chats')} />
+      </div>
+    );
+  }
+
   // --- 1. DESKTOP 2-COLUMN VIEW (WhatsApp Web / Telegram Web style) ---
   if (isDesktopView) {
     return (
@@ -163,7 +206,7 @@ export default function MobileApp({
 
             {/* Desktop Navigation Tabs */}
             <div className="flex items-center gap-1 bg-paper-mist p-1 rounded-xl border border-paper-line">
-              {navItems.map((item) => {
+              {currentNavItems.map((item) => {
                 const active = screen === item.id;
                 return (
                   <button
@@ -196,6 +239,7 @@ export default function MobileApp({
                 onWallpaperChange={setActiveWallpaper}
                 onOpenChat={setActiveChat}
                 onLogout={onLogout}
+                onOpenAdmin={() => setScreen('admin')}
               />
             )}
           </div>
@@ -263,6 +307,7 @@ export default function MobileApp({
                 onWallpaperChange={setActiveWallpaper}
                 onOpenChat={setActiveChat}
                 onLogout={onLogout}
+                onOpenAdmin={() => setScreen('admin')}
               />
             )}
           </div>
@@ -272,7 +317,7 @@ export default function MobileApp({
       {/* Bottom Navigation Dock (Hidden when inside an active conversation or call) */}
       {!activeChat && !activeGroup && call.phase === 'idle' && (
         <div className="flex items-center justify-around bg-paper/95 backdrop-blur-md border-t border-paper-line px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex-shrink-0 z-30">
-          {navItems.map((item) => {
+          {currentNavItems.map((item) => {
             const active = screen === item.id;
             return (
               <button

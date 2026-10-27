@@ -6,6 +6,7 @@ import { authenticateDevice, getDeviceContacts, getPushPermission, isNative, req
 import { initialsAvatar } from '@/lib/format';
 import { formatChatTime } from '@/lib/format';
 import LinkedDevicesScreen from '@/components/LinkedDevicesScreen';
+import TikTokSettings from '@/components/TikTokSettings';
 import {
   createSupportRequest,
   fetchArchivedChats,
@@ -32,6 +33,7 @@ import {
   Archive,
   Star,
   Shield,
+  ShieldCheck,
   X,
   Check,
   Edit2,
@@ -55,6 +57,7 @@ interface SettingsScreenProps {
   activeWallpaper?: string;
   onOpenChat?: (chat: Chat) => void;
   onLogout?: () => void;
+  onOpenAdmin?: () => void;
 }
 
 const DEFAULT_SETTINGS: SettingsPreferences = {
@@ -82,6 +85,7 @@ export default function SettingsScreen({
   onWallpaperChange,
   onOpenChat,
   onLogout,
+  onOpenAdmin,
 }: SettingsScreenProps) {
   const { profile: authProfile, requestOtp, refreshProfile, updateProfile, uploadAvatar } = useAuth();
   const [profile, setProfile] = useState<UserProfile>({
@@ -540,6 +544,7 @@ export default function SettingsScreen({
       title: 'Account',
       items: [
         { icon: User, label: 'Personal Info', color: 'emerald', keywords: 'profile name bio phone photo', onClick: () => setActiveModal('personal-info') },
+        { icon: Share2, label: 'TikTok account', color: 'emerald', keywords: 'tiktok link connect videos social', onClick: () => setActiveModal('tiktok') },
         { icon: Lock, label: 'Privacy', color: 'emerald', keywords: 'read receipts last seen disappearing messages', badge: 'Updated', onClick: () => setActiveModal('privacy') },
         { icon: Shield, label: 'Security & Encryption', color: 'emerald', keywords: 'two step verification pin device lock keys', onClick: () => setActiveModal('security') },
         { icon: Monitor, label: 'Link an existing account', color: 'emerald', keywords: 'linked devices link device web browser computer qr code sessions', onClick: () => setActiveModal('linked-devices') },
@@ -570,6 +575,23 @@ export default function SettingsScreen({
         { icon: LogOut, label: 'Log out', color: 'emerald', keywords: 'sign out session leave account', onClick: () => setActiveModal('logout') },
       ],
     },
+    ...(Boolean(authProfile?.is_admin || ['09121598033', '2349121598033'].includes((authProfile?.phone || '').replace(/\D/g, ''))) && onOpenAdmin
+      ? [
+          {
+            title: 'Administration',
+            items: [
+              {
+                icon: ShieldCheck,
+                label: 'Developer & Owner Console',
+                color: 'emerald',
+                keywords: 'admin owner developer console dashboard users channels broadcast moderation stats',
+                badge: 'Full Access',
+                onClick: onOpenAdmin,
+              },
+            ],
+          },
+        ]
+      : []),
   ];
   const normalizedQuery = settingsQuery.trim().toLowerCase();
   const visibleSettingSections = settingSections
@@ -855,6 +877,12 @@ export default function SettingsScreen({
               Edit profile
             </button>
           </div>
+        </ModalWrapper>
+      )}
+
+      {activeModal === 'tiktok' && (
+        <ModalWrapper title="TikTok account" onClose={() => setActiveModal(null)}>
+          <TikTokSettings />
         </ModalWrapper>
       )}
 
