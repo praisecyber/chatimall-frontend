@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "android:sync": "vite build && cap sync android",
+    "android:sync": "vite build && node scripts/patch-android.mjs && cap sync android",
     "android:open": "cap open android",
     "android:patch": "node scripts/patch-android.mjs",
     "apk:debug": "node scripts/build-apk.mjs"

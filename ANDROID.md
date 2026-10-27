@@ -21,13 +21,25 @@ Enable "Install unknown apps" for your file manager/browser, open the APK, sign 
 Allow microphone, camera and notifications when asked.
 
 ## 3. Point the app at your server
-The APK cannot use `localhost`. Deploy the server (see SETUP.md, section 6) and put its **https** address
-in the project's `.env`:
+The APK cannot use the PC's `localhost`. Deploy the server (see SETUP.md, section 6) and put its **https** address
+in the project's `.env`. The APK build now stops if `VITE_API_URL` is missing or is invalid, rather than
+silently producing an app that sends API requests to its own WebView:
 ```
 VITE_API_URL=https://your-chatimall-server.example.com
 ```
 Then rebuild the APK. If you set `CLIENT_ORIGINS` on the server, include `https://localhost` (the origin the
 Android app uses).
+
+For a USB-connected **debug-only** build against the backend running on this PC, use the device's localhost
+through ADB reverse. In PowerShell, from `frontend/`:
+```powershell
+adb reverse tcp:4000 tcp:4000
+$env:VITE_API_URL = 'http://localhost:4000'
+npm run apk:debug
+```
+The build script enables cleartext access only in the debug variant, and the WebView allows mixed content
+only when running a debug build. Do not use the local HTTP URL for a release build; use the HTTPS server
+URL above instead.
 
 ## 4. Push notifications (Firebase Cloud Messaging – free)
 1. console.firebase.google.com → create a project → **Add Android app** with package name
@@ -62,6 +74,9 @@ The Android app uses TikTok OpenSDK Share Kit to send a user-selected photo set 
 Add the Android app signature and SHA-256 signing-certificate fingerprint to the TikTok **sandbox**
 app settings. The Android SDK is added from TikTok's official Maven repository; do not copy the SDK
 sample app or its credentials into Chatimall.
+The native plugin source is kept in `android-templates/` because the generated `android/` directory
+is ignored by Git. Both `npm run apk:debug` and `npm run android:sync` apply the plugin, SDK dependencies,
+and package visibility configuration before syncing the native project.
 
 For a local sandbox build, set `TIKTOK_CLIENT_KEY` in the same PowerShell session that builds the app:
 ```powershell

@@ -65,10 +65,25 @@ export async function api<T>(path: string, opts: ApiOptions = {}): Promise<T> {
     throw new ApiError('Cannot reach the server. Check your internet connection.', 0, 'NETWORK');
   }
 
-  const data = (await res.json().catch(() => null)) as { error?: string; message?: string } | null;
+  const responseText = await res.text();
+  let data: unknown = null;
+  try {
+    data = responseText ? JSON.parse(responseText) : null;
+  } catch {
+    // Handle successful non-JSON responses below as a configuration/API error.
+  }
+
   if (!res.ok) {
     if (res.status === 401 && token) onUnauthorized?.();
-    throw new ApiError(data?.message || data?.error || `Request failed (${res.status})`, res.status, data?.error ?? 'ERROR');
+    const errorData = data && typeof data === 'object' ? data as { error?: string; message?: string } : null;
+    throw new ApiError(errorData?.message || errorData?.error || `Request failed (${res.status})`, res.status, errorData?.error ?? 'ERROR');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new ApiError(
+      'The server returned an invalid response. Check the API URL configured for this app.',
+      res.status,
+      'INVALID_RESPONSE'
+    );
   }
   return data as T;
 }

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { api, assetUrl, getToken, setToken, setUnauthorizedHandler, storedUrl } from '@/lib/http';
+import { ApiError, api, assetUrl, getToken, setToken, setUnauthorizedHandler, storedUrl } from '@/lib/http';
 import { connectSocket, disconnectSocket } from '@/lib/socket';
 import { uploadFile } from '@/lib/api';
 import { publishPublicKey } from '@/lib/e2ee';
@@ -55,6 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestOtp = useCallback(async (phone: string) => {
     const res = await api<{ ok: boolean; dev_code?: string }>('/api/auth/otp/request', { body: { phone } });
+    if (res.ok !== true) {
+      throw new ApiError('The server did not confirm the verification request.', 502, 'INVALID_RESPONSE');
+    }
     return { devCode: res.dev_code };
   }, []);
 
@@ -68,6 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestEmailOtp = useCallback(async (email: string) => {
     const res = await api<{ ok: boolean; dev_code?: string }>('/api/auth/email/otp/request', { body: { email } });
+    if (res.ok !== true) {
+      throw new ApiError('The server did not confirm the verification request.', 502, 'INVALID_RESPONSE');
+    }
     return { devCode: res.dev_code };
   }, []);
 
