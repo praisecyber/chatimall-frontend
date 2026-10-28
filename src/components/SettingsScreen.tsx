@@ -121,6 +121,18 @@ export default function SettingsScreen({
     }
   };
 
+  const beginPhoneVerification = async (phoneToVerify: string) => {
+    const response = await api<{ ok: boolean; dev_code?: string }>('/api/me/phone/email/request', {
+      body: { phone: phoneToVerify },
+    });
+    setPhoneChangeCode('');
+    setPhoneChangePin('');
+    setPhoneChangeDevCode(response.dev_code ?? null);
+    setPhoneChangePending(true);
+    setActiveModal('phone-change');
+    showToast('Confirmation code sent to your verified email');
+  };
+
   const saveProfile = async () => {
     if (!profile.name.trim()) {
       showToast('Name cannot be empty');
@@ -131,13 +143,7 @@ export default function SettingsScreen({
       const nextPhone = profile.phone.replace(/\D/g, '');
       const currentPhone = (authProfile?.phone ?? '').replace(/\D/g, '');
       if (nextPhone !== currentPhone) {
-        const response = await requestOtp(profile.phone.trim());
-        setPhoneChangeCode('');
-        setPhoneChangePin('');
-        setPhoneChangeDevCode(response.devCode ?? null);
-        setPhoneChangePending(true);
-        setActiveModal('phone-change');
-        showToast('Verification code sent to your new number');
+        await beginPhoneVerification(profile.phone.trim());
         return;
       }
       await updateProfile({ name: profile.name.trim(), bio: profile.bio.trim(), avatar_url: avatarUrl });
@@ -155,7 +161,7 @@ export default function SettingsScreen({
     if (!phoneChangePending) return;
     setSavingProfile(true);
     try {
-      const changedProfile = await api<{ phone: string }>('/api/me/phone', {
+      const changedProfile = await api<{ phone: string }>('/api/me/phone/email/verify', {
         method: 'PATCH',
         body: {
           phone: profile.phone.trim(),
@@ -784,6 +790,24 @@ export default function SettingsScreen({
                 onChange={(event) => setProfile({ ...profile, phone: event.target.value })}
                 className="w-full mt-1.5 px-3 py-2.5 rounded-xl bg-paper-mist border border-paper-line text-ink text-sm outline-none focus:border-brand-500"
               />
+              {profile.phone && !authProfile?.phone_verified && (
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <p className="text-xs text-amber-700">Not confirmed with your verified email.</p>
+                  <button
+                    type="button"
+                    disabled={savingProfile}
+                    onClick={() => {
+                      setSavingProfile(true);
+                      void beginPhoneVerification(profile.phone.trim())
+                        .catch((error: unknown) => showToast(error instanceof Error ? error.message : 'Could not send a verification code'))
+                        .finally(() => setSavingProfile(false));
+                    }}
+                    className="shrink-0 text-xs font-semibold text-brand-700 disabled:opacity-50"
+                  >
+                    Confirm phone by email
+                  </button>
+                </div>
+              )}
             </div>
 
             <button
@@ -799,18 +823,18 @@ export default function SettingsScreen({
 
       {activeModal === 'phone-change' && (
         <ModalWrapper
-          title="Verify New Phone Number"
+          title={authProfile?.phone_verified ? 'Verify New Phone Number' : 'Verify Phone Number'}
           onClose={() => setActiveModal('edit-profile')}
         >
           <form onSubmit={(event) => void submitPhoneChange(event)} className="space-y-4">
             <p className="text-sm leading-5 text-ink-mute">
-              Enter the verification code sent to <span className="font-semibold text-ink">{profile.phone}</span>.
+              Enter the code sent to the verified email on your account to confirm <span className="font-semibold text-ink">{profile.phone}</span>.
             </p>
             {phoneChangeDevCode && (
               <p className="text-sm text-amber-700">Dev code: <b>{phoneChangeDevCode}</b></p>
             )}
             <div>
-              <label htmlFor="phone-change-code" className="text-xs font-semibold uppercase text-ink-mute">SMS verification code</label>
+              <label htmlFor="phone-change-code" className="text-xs font-semibold uppercase text-ink-mute">Email verification code</label>
               <input
                 id="phone-change-code"
                 required
@@ -853,7 +877,10 @@ export default function SettingsScreen({
           <div className="space-y-4">
             <InfoRow label="Name" value={profile.name || 'Not set'} />
             <InfoRow label="About" value={profile.bio || 'Not set'} />
-            <InfoRow label="Phone number" value={profile.phone || 'Not set'} />
+            <InfoRow
+              label="Phone number"
+              value={profile.phone ? `${profile.phone}${authProfile?.phone_verified ? ' · Verified' : ' · Not verified'}` : 'Not set'}
+            />
             <InfoRow
               label="Sign-in email"
               value={authProfile?.email_verified ? `${authProfile.email} · Verified` : 'Not linked'}

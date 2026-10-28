@@ -31,9 +31,11 @@ On a device that is already signed in, open **Settings → Link an existing acco
 
 Web QR scanning requires camera access and a secure context (HTTPS, or localhost). Android uses the ML Kit barcode scanner; the Google Barcode Scanner module may download the first time it is needed.
 
-## Alternate email sign-in
+## Phone sign-in with email codes
 
-After signing in with a phone number, open **Settings → Personal Info → Add a sign-in email** and verify the email address. A verified email can then receive a login code as an alternative to SMS for that same account. The backend must have an email delivery adapter configured; see the backend README for its webhook contract. Email sign-in does not create a separate account.
+Sign-in starts with a phone number, then asks for an email address and sends the one-time code to that email. Existing phone accounts receive codes only at their already-linked, verified email. Completing the email OTP confirms the submitted phone number for the account. Changing or confirming a number in Settings also sends a code to the account's verified email. The backend must have an email delivery provider configured; see the backend README for the available providers.
+
+The email code proves access to the email inbox and confirms the account's association with the submitted phone number, but it does not prove possession of the SIM. Confirmed numbers are used for phone contact discovery. This flow avoids SMS charges for sign-in and phone confirmation, but is not equivalent to carrier-based phone verification.
 
 ## Deploy → Vercel
 

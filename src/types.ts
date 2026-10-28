@@ -45,6 +45,7 @@ export interface UserProfile {
 export interface DbProfile {
   id: string;
   phone: string | null;
+  phone_verified: boolean;
   email: string | null;
   email_verified: boolean;
   is_admin?: boolean;

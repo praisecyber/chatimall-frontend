@@ -13,6 +13,8 @@ interface AuthValue {
   /** Sends the SMS code. In dev mode the server may return the code (dev_code). */
   requestOtp: (phone: string) => Promise<{ devCode?: string }>;
   verifyOtp: (phone: string, code: string, pin?: string) => Promise<void>;
+  requestPhoneEmailOtp: (phone: string, email: string) => Promise<{ devCode?: string }>;
+  verifyPhoneEmailOtp: (phone: string, email: string, code: string, pin?: string) => Promise<void>;
   requestEmailOtp: (email: string) => Promise<{ devCode?: string }>;
   verifyEmailOtp: (email: string, code: string, pin?: string) => Promise<void>;
   completeLinkedSignIn: (token: string, linkId: string) => Promise<void>;
@@ -66,6 +68,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(res.token);
     setProfile(fixProfile(res.user));
     void publishPublicKey().catch(() => { });
+    connectSocket();
+  }, []);
+
+  const requestPhoneEmailOtp = useCallback(async (phone: string, email: string) => {
+    const res = await api<{ ok: boolean; dev_code?: string }>('/api/auth/otp/email/request', {
+      body: { phone, email },
+    });
+    if (res.ok !== true) {
+      throw new ApiError('The server did not confirm the verification request.', 502, 'INVALID_RESPONSE');
+    }
+    return { devCode: res.dev_code };
+  }, []);
+
+  const verifyPhoneEmailOtp = useCallback(async (phone: string, email: string, code: string, pin?: string) => {
+    const res = await api<{ token: string; user: DbProfile }>('/api/auth/otp/email/verify', {
+      body: { phone, email, code, ...(pin ? { pin } : {}) },
+    });
+    setToken(res.token);
+    setProfile(fixProfile(res.user));
+    void publishPublicKey().catch(() => {});
     connectSocket();
   }, []);
 
@@ -136,6 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       requestOtp,
       verifyOtp,
+      requestPhoneEmailOtp,
+      verifyPhoneEmailOtp,
       requestEmailOtp,
       verifyEmailOtp,
       completeLinkedSignIn,
@@ -144,7 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       uploadAvatar,
       signOut,
     }),
-    [profile, loading, requestOtp, verifyOtp, requestEmailOtp, verifyEmailOtp, completeLinkedSignIn, refreshProfile, updateProfile, uploadAvatar, signOut]
+    [profile, loading, requestOtp, verifyOtp, requestPhoneEmailOtp, verifyPhoneEmailOtp, requestEmailOtp, verifyEmailOtp, completeLinkedSignIn, refreshProfile, updateProfile, uploadAvatar, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
