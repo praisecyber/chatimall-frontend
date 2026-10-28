@@ -37,6 +37,8 @@ Sign-in starts with a phone number, then asks for an email address and sends the
 
 The email code proves access to the email inbox and confirms the account's association with the submitted phone number, but it does not prove possession of the SIM. Confirmed numbers are used for phone contact discovery. This flow avoids SMS charges for sign-in and phone confirmation, but is not equivalent to carrier-based phone verification.
 
+If normal sign-in fails, choose **Recover account using this phone**. Chatimall looks up the existing account by phone and sends a recovery code only to its already-verified email. The flow does not reveal whether a number is registered, does not accept a replacement email, and does not create or change account details.
+
 ## Deploy → Vercel
 
 1. Push this repo to GitHub.

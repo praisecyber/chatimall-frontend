@@ -63,7 +63,13 @@ const btnCls =
 
 /** Phone number → email OTP (verified by the Chatimall server). */
 export function AuthScreen() {
-  const { requestPhoneEmailOtp, verifyPhoneEmailOtp, completeLinkedSignIn } = useAuth();
+  const {
+    requestPhoneEmailOtp,
+    verifyPhoneEmailOtp,
+    requestPhoneRecoveryOtp,
+    verifyPhoneRecoveryOtp,
+    completeLinkedSignIn,
+  } = useAuth();
   const [welcomeAccepted, setWelcomeAccepted] = useState(false);
   const [devCode, setDevCode] = useState<string | null>(null);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'device'>('phone');
@@ -75,6 +81,7 @@ export function AuthScreen() {
   const [code, setCode] = useState('');
   const [pin, setPin] = useState('');
   const [secondFactorRequired, setSecondFactorRequired] = useState(false);
+  const [phoneRecoveryMode, setPhoneRecoveryMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -164,18 +171,15 @@ export function AuthScreen() {
     );
   }, [countrySearch]);
 
-  const sendCode = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    setError(null);
+  const normalizePhoneInput = () => {
     const raw = phoneInput.trim();
     if (!raw) {
       setError('Enter your phone number to continue.');
-      return;
+      return null;
     }
 
     let fullNumber = raw;
     if (!raw.startsWith('+')) {
-      // Strip leading 0 if present (e.g. 09121598033 -> 9121598033 with country code +234)
       const national = raw.replace(/^0+/, '');
       fullNumber = `${selectedCountry.code}${national}`;
     }
@@ -183,14 +187,23 @@ export function AuthScreen() {
     const normalized = normalizePhone(fullNumber);
     if (!normalized) {
       setError(`Please enter a valid phone number for ${selectedCountry.name} (${selectedCountry.code}).`);
-      return;
+      return null;
     }
+    return normalized;
+  };
+
+  const sendCode = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setError(null);
+    const normalized = normalizePhoneInput();
+    if (!normalized) return;
     setPhone(normalized);
     setEmailInput('');
     setEmail('');
     setCode('');
     setPin('');
     setSecondFactorRequired(false);
+    setPhoneRecoveryMode(false);
     setStep('email');
   };
 
@@ -209,6 +222,7 @@ export function AuthScreen() {
       setEmail(normalized);
       setPin('');
       setSecondFactorRequired(false);
+      setPhoneRecoveryMode(false);
       setStep('otp');
       setCooldown(30);
     } catch (err) {
@@ -216,6 +230,33 @@ export function AuthScreen() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const recoverWithPhone = async (recoveryPhone = phone) => {
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await requestPhoneRecoveryOtp(recoveryPhone);
+      setPhone(recoveryPhone);
+      setDevCode(res.devCode ?? null);
+      setEmail('');
+      setCode('');
+      setPin('');
+      setSecondFactorRequired(false);
+      setPhoneRecoveryMode(true);
+      setStep('otp');
+      setCooldown(30);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start account recovery.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const recoverFromPhoneEntry = () => {
+    setError(null);
+    const normalized = normalizePhoneInput();
+    if (normalized) void recoverWithPhone(normalized);
   };
 
   const verify = async (e: React.FormEvent) => {
@@ -227,7 +268,11 @@ export function AuthScreen() {
     }
     setBusy(true);
     try {
-      await verifyPhoneEmailOtp(phone, email, code.trim(), secondFactorRequired ? pin : undefined);
+      if (phoneRecoveryMode) {
+        await verifyPhoneRecoveryOtp(phone, code.trim(), secondFactorRequired ? pin : undefined);
+      } else {
+        await verifyPhoneEmailOtp(phone, email, code.trim(), secondFactorRequired ? pin : undefined);
+      }
       // on success the auth context takes over and the app opens
     } catch (err) {
       if (err instanceof ApiError && err.code === 'SECOND_FACTOR_REQUIRED') {
@@ -399,6 +444,14 @@ export function AuthScreen() {
           <button type="submit" disabled={busy} className={btnCls}>
             {busy && <Loader2 className="w-4 h-4 animate-spin" />} Continue
           </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={recoverFromPhoneEntry}
+            className="w-full text-sm font-semibold text-brand-700 disabled:opacity-50"
+          >
+            Can’t sign in? Recover account using this phone
+          </button>
         </form>
       ) : step === 'email' && loginMethod === 'phone' ? (
         <form onSubmit={sendPhoneEmailCode} className="space-y-4">
@@ -433,6 +486,15 @@ export function AuthScreen() {
           {error && <p role="alert" className="text-xs text-rose-600">{error}</p>}
           <button type="submit" disabled={busy} className={btnCls}>
             {busy && <Loader2 className="w-4 h-4 animate-spin" />} Send verification code
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void recoverWithPhone()}
+            className="w-full text-sm font-semibold text-brand-700 disabled:opacity-50"
+          >
+            {busy && <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />}
+            Can’t sign in? Recover account using this phone
           </button>
         </form>
       ) : step === 'phone' && loginMethod === 'device' ? (
@@ -493,16 +555,19 @@ export function AuthScreen() {
               setCode('');
               setPin('');
               setSecondFactorRequired(false);
+              setPhoneRecoveryMode(false);
               setError(null);
             }}
             className="flex items-center gap-1 text-xs text-ink-mute hover:text-ink"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Change email
+            <ArrowLeft className="w-3.5 h-3.5" /> {phoneRecoveryMode ? 'Back' : 'Change email'}
           </button>
           <div>
             <h1 className="text-xl font-bold">Enter the code</h1>
             <p className="text-sm text-ink-mute mt-1">
-              Sent to {email} for phone +{phone.replace(/^\+/, '')}
+              {phoneRecoveryMode
+                ? `If this number has an account with a verified email, a code was sent to that email. Phone +${phone.replace(/^\+/, '')}`
+                : `Sent to ${email} for phone +${phone.replace(/^\+/, '')}`}
             </p>
             {devCode && (
               <p className="text-xs text-amber-700 mt-2">Dev mode: your code is <b className="tabular-nums">{devCode}</b></p>
@@ -540,7 +605,7 @@ export function AuthScreen() {
           <button
             type="button"
             disabled={cooldown > 0 || busy}
-            onClick={() => sendPhoneEmailCode()}
+            onClick={() => phoneRecoveryMode ? void recoverWithPhone() : void sendPhoneEmailCode()}
             className="w-full text-xs text-brand-600 disabled:text-gray-500"
           >
             {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
