@@ -75,6 +75,7 @@ import {
   changeAdminUserRole,
   fetchAdminUserActivity,
   deleteAdminUser,
+  resetAdminNonAdminData,
   fetchAdminChannels,
   createAdminChannel,
   deleteAdminChannel,
@@ -310,6 +311,9 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
   // Settings
   const [savingSettings, setSavingSettings] = useState(false);
   const [newBannedWord, setNewBannedWord] = useState('');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [resettingData, setResettingData] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -570,6 +574,28 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
       if (selectedUserId === u.id) setSelectedUserId(null);
     } catch {
       showToast('Failed to delete user.');
+    }
+  };
+
+  const handleResetNonAdminData = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (resetConfirmation !== 'RESET NON-ADMIN DATA') return;
+    setResettingData(true);
+    try {
+      const { result } = await resetAdminNonAdminData(resetConfirmation);
+      setUsers([]);
+      setSelectedUserId(null);
+      setSelectedActivity(null);
+      setReports([]);
+      setChannels([]);
+      setShowResetModal(false);
+      setResetConfirmation('');
+      showToast(`Removed ${result.deletedUsers} non-admin accounts; preserved ${result.preservedAdmins} admin/staff accounts.`);
+      await loadRealData();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'The reset failed. No success was reported.');
+    } finally {
+      setResettingData(false);
     }
   };
 
@@ -2576,12 +2602,84 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
               </div>
             </div>
           </form>
+          {profile?.is_admin && (
+            <section className="mx-auto w-full max-w-2xl rounded-3xl border border-rose-200 bg-rose-50/70 p-4 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-rose-900">
+                    <AlertOctagon className="h-4 w-4" />
+                    Reset non-admin accounts
+                  </h3>
+                  <p className="mt-1 max-w-xl text-xs leading-relaxed text-rose-800/80">
+                    Permanently remove all non-admin accounts and their associated chats, messages, devices, channels, and media. Admin/staff accounts and system settings are preserved. Super-admin access and typed confirmation are required.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowResetModal(true)}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-rose-800"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Reset non-admin data
+                </button>
+              </div>
+            </section>
+          )}
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
           MODALS
       ───────────────────────────────────────────────────────────── */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <form onSubmit={handleResetNonAdminData} className="w-full max-w-md space-y-4 rounded-3xl border border-rose-200 bg-paper p-6 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+                <AlertOctagon className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-ink">Confirm data reset</h3>
+                <p className="mt-1 text-xs leading-relaxed text-ink-mute">
+                  This permanently deletes non-admin accounts and their associated data. Admin/staff accounts and global settings are kept. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <label htmlFor="admin-reset-confirmation" className="block text-xs font-semibold text-ink">
+              Type <span className="font-mono text-rose-700">RESET NON-ADMIN DATA</span> to continue
+            </label>
+            <input
+              id="admin-reset-confirmation"
+              autoComplete="off"
+              value={resetConfirmation}
+              onChange={(event) => setResetConfirmation(event.target.value)}
+              className="w-full rounded-xl border border-paper-line bg-white px-3.5 py-3 font-mono text-sm text-ink outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/15"
+            />
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                disabled={resettingData}
+                onClick={() => {
+                  setShowResetModal(false);
+                  setResetConfirmation('');
+                }}
+                className="rounded-xl px-3.5 py-2 text-xs font-semibold text-ink-mute hover:bg-paper-mist disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={resettingData || resetConfirmation !== 'RESET NON-ADMIN DATA'}
+                className="inline-flex items-center gap-2 rounded-xl bg-rose-700 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {resettingData && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Permanently reset
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Role Switcher Modal */}
       {roleModalUser && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-ink/40 backdrop-blur-xs p-4">

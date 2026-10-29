@@ -645,6 +645,14 @@ export async function deleteAdminUser(userId: string): Promise<void> {
   await api(`/api/admin/users/${userId}`, { method: 'DELETE' });
 }
 
+export async function resetAdminNonAdminData(
+  confirmation: string
+): Promise<{ result: { deletedUsers: number; preservedAdmins: number } }> {
+  return api('/api/admin/reset/non-admin-users', {
+    body: { confirmation },
+  });
+}
+
 export async function fetchAdminChannels(search = ''): Promise<AdminChannelItem[]> {
   const query = new URLSearchParams(search ? { search } : {});
   const res = await api<{ ok: boolean; channels: AdminChannelItem[] }>(`/api/admin/channels?${query.toString()}`);
