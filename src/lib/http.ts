@@ -3,7 +3,9 @@
  * - In development the Vite dev server proxies /api and /socket.io to localhost:4000, so API_BASE is empty.
  * - In the Android app (and any separate hosting) set VITE_API_URL=https://your-server.example.com
  */
-export const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '');
+const configuredApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+const defaultProductionApiUrl = 'https://chatimall-backend-82mq.onrender.com';
+export const API_BASE = (configuredApiUrl || (import.meta.env.PROD ? defaultProductionApiUrl : '')).replace(/\/$/, '');
 
 const TOKEN_KEY = 'chatimall_token';
 
