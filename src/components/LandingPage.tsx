@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { APP_NAME } from '@/brand';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   X,
   Menu,
   Download,
+  Monitor,
+  Smartphone,
   Heart,
   Plus,
   ChevronDown,
@@ -509,7 +512,7 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
             <p className="pc-kicker pc-mono">Take the room with you</p>
             <h2 className="pc-install-title">Choose your way in.</h2>
             <p className="pc-install-desc">
-              {APP_NAME} is fully ready to use. Launch the complete application directly right now or install it on your device.
+              Choose the desktop web app or install the Android app from its APK.
             </p>
             <div className="pc-install-grid">
               <button
@@ -518,37 +521,43 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
                   onDownload();
                 }}
                 className="pc-install-option"
-                data-testid="button-download-android"
+                data-testid="button-open-desktop-app"
               >
-                <div>
-                  <p className="pc-install-option-title">Launch {APP_NAME}</p>
-                  <p className="pc-install-option-desc">Complete app · Instant access</p>
+                <div className="flex items-start gap-3">
+                  <Monitor className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
+                  <div>
+                    <p className="pc-install-option-title">Desktop / Web app</p>
+                    <p className="pc-install-option-desc">Use {APP_NAME} in your browser. No installer needed.</p>
+                  </div>
                 </div>
-                <span className="pc-install-go">Open app →</span>
+                <span className="pc-install-go">Open web app →</span>
               </button>
-              <button
-                onClick={() => {
-                  setInstallOpen(false);
-                  const link = document.createElement('a');
-                  link.href = '/downloads/Chatimall.apk';
-                  link.download = 'Chatimall.apk';
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-                className="pc-install-option"
+              <a
+                href="/downloads/Chatimall.apk"
+                download="Chatimall.apk"
+                onClick={() => setInstallOpen(false)}
+                className="pc-install-option no-underline"
                 data-testid="button-download-apk"
               >
-                <div>
-                  <p className="pc-install-option-title">Download Android APK</p>
-                  <p className="pc-install-option-desc">Direct APK package · Instant file download</p>
+                <div className="flex items-start gap-3">
+                  <Smartphone className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
+                  <div>
+                    <p className="pc-install-option-title">Android app (APK)</p>
+                    <p className="pc-install-option-desc">Download the installer for Android devices.</p>
+                  </div>
                 </div>
                 <span className="pc-install-go">Download APK →</span>
-              </button>
+              </a>
             </div>
             <div className="pc-install-qr">
-              <div className="pc-qr-art"></div>
-              <p className="pc-install-qr-text pc-mono">Scan QR to install on phone</p>
+              <QRCodeSVG
+                value={`${window.location.origin}/downloads/Chatimall.apk`}
+                size={76}
+                level="M"
+                title="Scan to download Chatimall for Android"
+                className="shrink-0 rounded-lg bg-white p-1.5"
+              />
+              <p className="pc-install-qr-text pc-mono">Scan with your phone to get the Android APK</p>
             </div>
           </div>
         </div>
