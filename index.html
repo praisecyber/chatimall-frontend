@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/app-icon/chatimall-icon.svg" />
-  <meta name="theme-color" content="#FFFFFF" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#070A08" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://accounts.google.com" />
@@ -38,7 +39,9 @@
       style="position:fixed;inset:0;z-index:2147483647;background:#fff"
     >
       <picture>
+        <source media="(prefers-color-scheme: dark) and (min-aspect-ratio: 1/1)" srcset="/splash/splash-dark-wide.png" />
         <source media="(prefers-color-scheme: dark)" srcset="/splash/splash-dark.png" />
+        <source media="(min-aspect-ratio: 1/1)" srcset="/splash/splash-light-wide.png" />
         <img
           src="/splash/splash-light.png"
           alt=""

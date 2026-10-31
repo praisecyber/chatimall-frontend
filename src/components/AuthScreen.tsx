@@ -21,40 +21,35 @@ import CountryFlag from '@/components/CountryFlag';
 
 function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#f3f5f3] px-4 py-8 text-ink">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(31,124,90,0.08),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(31,124,90,0.06),_transparent_35%)]" />
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-60"
-        viewBox="0 0 1440 900"
-        preserveAspectRatio="xMidYMid slice"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <g fill="none" stroke="rgba(34, 139, 109, 0.25)" strokeWidth="1.2">
-          <path d="M0 170 155 265 310 180 475 295 635 215 800 320 975 200 1155 305 1325 185 1440 255" />
-          <path d="M0 625 155 520 320 645 480 500 660 605 820 475 1010 590 1190 480 1365 625 1440 575" />
-          <path d="M155 265 155 520M310 180 320 645M475 295 480 500M635 215 660 605M800 320 820 475M975 200 1010 590M1155 305 1190 480M1325 185 1365 625" />
-          <path d="M0 170 320 645M310 180 660 605M635 215 1010 590M975 200 1365 625M0 625 475 295M320 645 800 320M660 605 1155 305M1010 590 1440 255" />
-        </g>
-      </svg>
-      <div className={`relative z-10 flex w-full ${wide ? 'max-w-4xl' : 'max-w-[660px]'} flex-col items-center`}>
-        <div className="mb-7 flex items-center gap-3 self-start rounded-[18px] bg-[#1d2d29] px-4 py-2 shadow-[0_8px_22px_rgba(11,18,16,0.18)]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e8f0ec] p-1.5">
-            <BrandMark size={26} />
+    <div className="flex min-h-[100svh] w-full flex-col bg-[#f7f8f6] px-4 py-5 text-ink sm:px-8 sm:py-7">
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white p-1.5 ring-1 ring-[#e7e9e5]">
+            <BrandMark size={30} />
           </div>
-          <div className="text-[13px] font-bold leading-none tracking-[-0.02em] text-white">
-            Say it. Grow it.
+          <div>
+            <div className="text-base font-bold tracking-[-0.04em] text-[#173c2e]">Chatimall</div>
+            <div className="text-[10px] font-medium text-[#718078]">Say it. Grow it.</div>
           </div>
         </div>
-        <div className="w-full rounded-[30px] border border-[#dfe9e4] bg-[#f5f8f5] p-5 shadow-[0_18px_44px_rgba(15,23,42,0.07)] sm:p-11">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#68746d]">
+          <ShieldCheck className="h-4 w-4 text-[#13835d]" />
+          Secure sign-in
+        </span>
+      </header>
+
+      <main className={`mx-auto flex w-full flex-1 items-center justify-center py-8 ${wide ? 'max-w-[900px]' : 'max-w-[480px]'}`}>
+        <div className="w-full rounded-2xl border border-[#e7e9e5] bg-white p-5 shadow-[0_8px_30px_rgba(25,45,34,0.04)] sm:rounded-3xl sm:p-8">
           {children}
         </div>
-      </div>
+      </main>
+
+      <footer className="mx-auto w-full max-w-6xl pt-2 text-center text-[11px] leading-relaxed text-[#7b8981]">
+        By continuing, you agree to keep your conversations respectful and your account details private.
+      </footer>
     </div>
   );
 }
-
-import WelcomeScreen from '@/components/WelcomeScreen';
 
 const inputCls =
   'w-full px-4 py-3.5 rounded-2xl bg-paper-mist border border-transparent focus:bg-white focus:border-brand-600/30 outline-none text-ink placeholder-ink-faint text-sm transition-colors';
@@ -70,7 +65,6 @@ export function AuthScreen() {
     verifyPhoneRecoveryOtp,
     completeLinkedSignIn,
   } = useAuth();
-  const [welcomeAccepted, setWelcomeAccepted] = useState(false);
   const [devCode, setDevCode] = useState<string | null>(null);
   const [loginMethod, setLoginMethod] = useState<'phone' | 'device'>('phone');
   const [step, setStep] = useState<'phone' | 'email' | 'otp'>('phone');
@@ -287,18 +281,6 @@ export function AuthScreen() {
       setBusy(false);
     }
   };
-
-  if (!welcomeAccepted) {
-    return (
-      <WelcomeScreen
-        onContinue={() => setWelcomeAccepted(true)}
-        onLinkDevice={() => {
-          setWelcomeAccepted(true);
-          setLoginMethod('device');
-        }}
-      />
-    );
-  }
 
   return (
     <Shell wide={loginMethod === 'device'}>

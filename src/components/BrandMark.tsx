@@ -9,7 +9,7 @@ export default function BrandMark({
 }) {
   return (
     <img
-      src="/app-icon/chatimall-round-icon.svg"
+      src="/app-icon/chatimall-icon.svg"
       width={size}
       height={size}
       className={className}

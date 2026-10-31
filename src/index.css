@@ -2075,6 +2075,7 @@ body {
 }
 
 @keyframes auth-network-node {
+
   0%,
   100% {
     opacity: 0.45;
@@ -2088,6 +2089,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .auth-network__pulse,
   .auth-network__nodes circle {
     animation: none;
