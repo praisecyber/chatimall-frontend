@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/app-icon/chatimall-round-icon.svg" />
+  <link rel="icon" type="image/svg+xml" href="/app-icon/chatimall-icon.svg" />
   <meta name="theme-color" content="#FFFFFF" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -30,7 +30,23 @@
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div
+      id="startup-splash"
+      role="status"
+      aria-label="Loading Chatimall"
+      style="position:fixed;inset:0;z-index:2147483647;background:#fff"
+    >
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="/splash/splash-dark.png" />
+        <img
+          src="/splash/splash-light.png"
+          alt=""
+          style="display:block;width:100%;height:100%;object-fit:cover"
+        />
+      </picture>
+    </div>
+  </div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

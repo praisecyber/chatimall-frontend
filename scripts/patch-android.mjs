@@ -160,8 +160,22 @@ writeIfChanged(appBuildFile, originalAppBuild, appBuild);
 
 const activityFile = path.join('android', 'app', 'src', 'main', 'java', 'com', 'chatimall', 'app', 'MainActivity.java');
 let activity = fs.readFileSync(activityFile, 'utf8');
-for (const importName of ['android.content.Intent', 'android.os.Bundle', 'android.webkit.WebSettings', 'com.getcapacitor.PluginHandle']) {
+for (const importName of [
+  'android.content.Intent',
+  'android.os.Bundle',
+  'android.webkit.WebSettings',
+  'androidx.core.splashscreen.SplashScreen',
+  'com.getcapacitor.PluginHandle',
+]) {
   activity = ensureJavaImport(activity, importName);
+}
+if (!activity.includes('SplashScreen.installSplashScreen(this)')) {
+  activity = replaceOrThrow(
+    activity,
+    /public\s+void\s+onCreate\s*\(\s*Bundle\s+savedInstanceState\s*\)\s*\{/,
+    (methodStart) => `${methodStart}\n        SplashScreen.installSplashScreen(this);`,
+    'Chatimall splash-screen installation'
+  );
 }
 if (!activity.includes('registerPlugin(TikTokSharePlugin.class)')) {
   const onCreate = /public\s+void\s+onCreate\s*\(\s*Bundle\s+savedInstanceState\s*\)\s*\{/;
