@@ -5,6 +5,9 @@ import {
   Check,
   ChevronDown,
   Loader2,
+  Lock,
+  Mail,
+  Mic,
   QrCode,
   RefreshCw,
   ShieldCheck,
@@ -21,40 +24,72 @@ import CountryFlag from '@/components/CountryFlag';
 
 function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="flex min-h-[100svh] w-full flex-col bg-[#f7f8f6] px-4 py-5 text-ink sm:px-8 sm:py-7">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white p-1.5 ring-1 ring-[#e7e9e5]">
-            <BrandMark size={30} />
+    <div className="flex min-h-[100svh] w-full bg-[#f7f8f6] text-ink">
+      {/* Desktop brand panel */}
+      <aside className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden border-r border-[#e7e9e5] bg-white p-10 lg:flex xl:w-[46%]">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0fa958]/[0.07] blur-[110px]" />
+
+        <div className="relative flex flex-col items-center gap-6 text-center">
+          <div className="flex h-24 w-24 items-center justify-center rounded-[32px] bg-[#e6f5ed] shadow-[0_10px_30px_rgba(15,169,88,0.14)]">
+            <BrandMark size={62} />
           </div>
-          <div>
-            <div className="text-base font-bold tracking-[-0.04em] text-[#173c2e]">Chatimall</div>
-            <div className="text-[10px] font-medium text-[#718078]">Say it. Grow it.</div>
+          <div className="text-4xl font-extrabold tracking-[-0.03em] text-[#14231c]">
+            Chat<span className="text-[#0fa958]">imall</span>
+          </div>
+          <div className="text-[12px] font-semibold uppercase tracking-[0.22em] text-[#7b8981]">
+            Say it. Grow it.
           </div>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#68746d]">
-          <ShieldCheck className="h-4 w-4 text-[#13835d]" />
-          Secure sign-in
-        </span>
-      </header>
 
-      <main className={`mx-auto flex w-full flex-1 items-center justify-center py-8 ${wide ? 'max-w-[900px]' : 'max-w-[480px]'}`}>
-        <div className="w-full rounded-2xl border border-[#e7e9e5] bg-white p-5 shadow-[0_8px_30px_rgba(25,45,34,0.04)] sm:rounded-3xl sm:p-8">
-          {children}
+        <div className="relative mt-14 max-w-[340px] space-y-4">
+          <div className="flex items-start gap-3.5">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e6f5ed] text-[#0d9460]">
+              <Mic className="h-4 w-4" />
+            </span>
+            <p className="text-[14.5px] leading-relaxed text-[#5c6864]">
+              Voice notes, live rooms, and chats with the people you actually want to hear from.
+            </p>
+          </div>
+          <div className="flex items-start gap-3.5">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e6f5ed] text-[#0d9460]">
+              <Lock className="h-4 w-4" />
+            </span>
+            <p className="text-[14.5px] leading-relaxed text-[#5c6864]">
+              Sign in with your phone — verified by a one-time code, no password to remember.
+            </p>
+          </div>
         </div>
-      </main>
+      </aside>
 
-      <footer className="mx-auto w-full max-w-6xl pt-2 text-center text-[11px] leading-relaxed text-[#7b8981]">
-        By continuing, you agree to keep your conversations respectful and your account details private.
-      </footer>
+      {/* Form column */}
+      <div className="flex min-w-0 flex-1 flex-col px-4 py-6 sm:px-8 sm:py-8">
+        <main className={`mx-auto flex w-full flex-1 flex-col items-center justify-center py-6 ${wide ? 'max-w-[860px]' : 'max-w-[420px]'}`}>
+          <div className="mb-7 flex flex-col items-center gap-3.5 text-center lg:hidden">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#e6f5ed] shadow-[0_6px_20px_rgba(15,169,88,0.12)]">
+              <BrandMark size={46} />
+            </div>
+            <div>
+              <div className="text-[22px] font-extrabold leading-none tracking-[-0.03em] text-[#14231c]">Chatimall</div>
+              <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7b8981]">Say it. Grow it.</div>
+            </div>
+          </div>
+          <div className="w-full rounded-[28px] border border-[#e7e9e5] bg-white p-6 shadow-[0_12px_40px_rgba(25,45,34,0.06)] sm:p-8">
+            {children}
+          </div>
+        </main>
+
+        <footer className="mx-auto w-full max-w-md pb-1 text-center text-[11px] leading-relaxed text-[#8a968f]">
+          By continuing, you agree to keep your conversations respectful and your account details private.
+        </footer>
+      </div>
     </div>
   );
 }
 
 const inputCls =
-  'w-full px-4 py-3.5 rounded-2xl bg-paper-mist border border-transparent focus:bg-white focus:border-brand-600/30 outline-none text-ink placeholder-ink-faint text-sm transition-colors';
+  'w-full px-4 py-4 rounded-2xl bg-[#f1f3f2] text-ink placeholder-[#9aa59f] text-[15px] font-medium outline-none transition focus:bg-white focus:ring-2 focus:ring-[#0fa958]/25';
 const btnCls =
-  'w-full py-4 rounded-[20px] bg-[#0f8a5f] text-white font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_10px_18px_rgba(15,138,96,0.23)] hover:brightness-105 transition';
+  'w-full py-4 rounded-full bg-[#0fa958] text-white font-bold text-[15px] disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_10px_22px_rgba(15,169,88,0.28)] hover:brightness-105 active:scale-[0.99] transition';
 
 /** Phone number → email OTP (verified by the Chatimall server). */
 export function AuthScreen() {
@@ -285,7 +320,7 @@ export function AuthScreen() {
   return (
     <Shell wide={loginMethod === 'device'}>
       {step === 'phone' && (
-        <div className="mx-auto mb-8 grid w-full max-w-[560px] grid-cols-2 gap-1 rounded-[16px] bg-[#e8f0ec] p-1" role="group" aria-label="Choose sign-in method">
+        <div className="mx-auto mb-7 grid w-full max-w-[300px] grid-cols-2 gap-1 rounded-full bg-[#edf1ee] p-1" role="group" aria-label="Choose sign-in method">
           <button
             type="button"
             aria-pressed={loginMethod === 'phone'}
@@ -294,7 +329,7 @@ export function AuthScreen() {
               setLinkChallenge(null);
               setError(null);
             }}
-            className={`flex items-center justify-center gap-2 rounded-[12px] px-2 py-3 text-sm font-semibold transition-colors ${loginMethod === 'phone' ? 'bg-white text-[#1f7660] shadow-[0_1px_2px_rgba(15,23,42,0.05)]' : 'text-[#4d5d57] hover:text-ink'}`}
+            className={`flex items-center justify-center gap-2 rounded-full px-2 py-2.5 text-sm font-semibold transition-colors ${loginMethod === 'phone' ? 'bg-white text-[#0d9460] shadow-sm' : 'text-[#5c6864] hover:text-ink'}`}
           >
             <Smartphone className="h-4 w-4 shrink-0" /> Phone
           </button>
@@ -306,7 +341,7 @@ export function AuthScreen() {
               setLinkChallenge(null);
               setError(null);
             }}
-            className={`flex items-center justify-center gap-2 rounded-[12px] px-2 py-3 text-sm font-semibold transition-colors ${loginMethod === 'device' ? 'bg-white text-[#1f7660] shadow-[0_1px_2px_rgba(15,23,42,0.05)]' : 'text-[#4d5d57] hover:text-ink'}`}
+            className={`flex items-center justify-center gap-2 rounded-full px-2 py-2.5 text-sm font-semibold transition-colors ${loginMethod === 'device' ? 'bg-white text-[#0d9460] shadow-sm' : 'text-[#5c6864] hover:text-ink'}`}
           >
             <QrCode className="h-4 w-4 shrink-0" /> Link device
           </button>
@@ -314,31 +349,30 @@ export function AuthScreen() {
       )}
 
       {step === 'phone' && loginMethod === 'phone' ? (
-        <form onSubmit={sendCode} className="space-y-5">
-          <div>
-            <h1 className="text-2xl font-bold tracking-[-0.04em] text-[#1f2d2a] leading-tight">
-              Create or sign in with phone
+        <form onSubmit={sendCode} className="space-y-6">
+          <div className="text-center">
+            <h1 className="text-[24px] font-extrabold leading-tight tracking-[-0.03em] text-[#16241e]">
+              Sign in with your phone
             </h1>
-            <p className="mt-2 text-[1.02rem] leading-relaxed text-[#5c6864]">
-              Enter your phone number, then verify your sign-in with a code sent to your email.
+            <p className="mt-2 text-[14.5px] leading-relaxed text-[#68746d]">
+              We'll email you a one-time code to verify it's you. No password needed.
             </p>
           </div>
 
-          <div className="space-y-2.5 pt-3">
-            <label className="text-[1rem] font-bold text-[#2d3a36]">Country &amp; Phone Number</label>
-            <div className="relative flex items-center rounded-[18px] bg-[#edf2ee] border border-[#dfeae4] focus-within:border-[#55ad91] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#6cc3a5]/15 transition-all">
+          <div className="space-y-3">
+            <div className="flex gap-2">
               {/* Country Selector Trigger */}
               <div className="relative" ref={countryPickerRef}>
                 <button
                   type="button"
                   onClick={() => setShowCountryPicker((prev) => !prev)}
-                  className="flex items-center gap-1.5 px-3.5 py-3.5 text-sm font-semibold text-ink hover:bg-black/[0.04] active:bg-black/[0.08] rounded-l-2xl transition border-r border-black/[0.08] select-none"
+                  className="flex items-center gap-1.5 rounded-2xl bg-[#f1f3f2] px-3.5 py-4 text-sm font-semibold text-ink transition hover:bg-[#e9edea] select-none"
                   title="Select Country"
                   aria-label={`Selected country: ${selectedCountry.name} (${selectedCountry.code})`}
                 >
                   <CountryFlag country={selectedCountry} size="lg" />
-                  <span className="text-xs font-bold font-mono tracking-tight text-ink">{selectedCountry.code}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 text-ink-mute transition-transform duration-200 ${showCountryPicker ? 'rotate-180 text-brand-600' : ''}`} />
+                  <span className="text-sm font-bold tracking-tight text-ink">{selectedCountry.code}</span>
+                  <ChevronDown className={`w-4 h-4 text-[#8a968f] transition-transform duration-200 ${showCountryPicker ? 'rotate-180 text-[#0fa958]' : ''}`} />
                 </button>
 
                 {/* Country Picker Popover Dropdown */}
@@ -414,15 +448,15 @@ export function AuthScreen() {
                   }
                   setPhoneInput(val);
                 }}
-                className="flex-1 px-3.5 py-3.5 bg-transparent outline-none text-ink placeholder-ink-faint text-sm font-medium"
+                className="min-w-0 flex-1 rounded-2xl bg-[#f1f3f2] px-4 py-4 text-[15px] font-medium text-ink placeholder-[#9aa59f] outline-none transition focus:bg-white focus:ring-2 focus:ring-[#0fa958]/25"
               />
             </div>
-            <p className="text-[11px] text-ink-mute">
-              Enter with or without leading zero (e.g. <span className="font-mono text-ink-soft">09121598033</span> or <span className="font-mono text-ink-soft">9121598033</span>).
+            <p className="text-center text-[11px] text-[#8a968f]">
+              With or without leading zero (e.g. <span className="font-mono text-[#5c6864]">09121598033</span> or <span className="font-mono text-[#5c6864]">9121598033</span>).
             </p>
           </div>
 
-          {error && <p className="text-[0.95rem] font-medium text-[#de5b5b]">{error}</p>}
+          {error && <p className="text-center text-[13px] font-semibold text-[#de5b5b]">{error}</p>}
           <button type="submit" disabled={busy} className={btnCls}>
             {busy && <Loader2 className="w-4 h-4 animate-spin" />} Continue
           </button>
@@ -430,17 +464,19 @@ export function AuthScreen() {
             type="button"
             disabled={busy}
             onClick={recoverFromPhoneEntry}
-            className="w-full text-sm font-semibold text-brand-700 disabled:opacity-50"
+            className="w-full text-center text-[13px] font-semibold text-[#68746d] transition hover:text-ink disabled:opacity-50"
           >
-            Can’t sign in? Recover account using this phone
+            Can’t sign in? Recover account
           </button>
         </form>
       ) : step === 'email' && loginMethod === 'phone' ? (
-        <form onSubmit={sendPhoneEmailCode} className="space-y-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Verify your phone sign-in</h1>
-            <p className="mt-1.5 text-sm leading-relaxed text-ink-mute">
-              Enter an email address where we can send your one-time code for phone <span className="font-mono">+{phone}</span>.
+        <form onSubmit={sendPhoneEmailCode} className="space-y-5">
+          <div className="text-center">
+            <h1 className="text-[24px] font-extrabold leading-tight tracking-[-0.03em] text-[#16241e]">
+              Where should we send the code?
+            </h1>
+            <p className="mt-2 text-[14.5px] leading-relaxed text-[#68746d]">
+              Enter your email — we'll send a one-time verification code for phone <span className="font-mono font-semibold text-[#3c4843]">+{phone}</span>.
             </p>
           </div>
           <button
@@ -449,41 +485,44 @@ export function AuthScreen() {
               setStep('phone');
               setError(null);
             }}
-            className="flex items-center gap-1 text-xs text-ink-mute hover:text-ink"
+            className="mx-auto flex items-center gap-1 text-[13px] font-medium text-[#8a968f] transition hover:text-ink"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Change number
           </button>
-          <input
-            autoFocus
-            type="email"
-            autoComplete="email"
-            placeholder="you@example.com"
-            value={emailInput}
-            onChange={(event) => setEmailInput(event.target.value)}
-            className={inputCls}
-          />
-          <p className="text-xs leading-relaxed text-ink-mute">
-            The code will be delivered to the verified email for this account. Completing it confirms this phone number for the account, but does not prove access to its SIM.
+          <div className="relative">
+            <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa59f]" />
+            <input
+              autoFocus
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={emailInput}
+              onChange={(event) => setEmailInput(event.target.value)}
+              className={`${inputCls} pl-11`}
+            />
+          </div>
+          <p className="text-center text-[11px] leading-relaxed text-[#8a968f]">
+            The code goes to the verified email for this account. Completing it confirms this phone number for the account, but does not prove access to its SIM.
           </p>
-          {error && <p role="alert" className="text-xs text-rose-600">{error}</p>}
+          {error && <p role="alert" className="text-center text-[13px] font-semibold text-rose-600">{error}</p>}
           <button type="submit" disabled={busy} className={btnCls}>
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />} Send verification code
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />} Send code
           </button>
           <button
             type="button"
             disabled={busy}
             onClick={() => void recoverWithPhone()}
-            className="w-full text-sm font-semibold text-brand-700 disabled:opacity-50"
+            className="w-full text-center text-[13px] font-semibold text-[#68746d] transition hover:text-ink disabled:opacity-50"
           >
             {busy && <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />}
-            Can’t sign in? Recover account using this phone
+            Can’t sign in? Recover account
           </button>
         </form>
       ) : step === 'phone' && loginMethod === 'device' ? (
         <div className="mx-auto grid w-full max-w-3xl items-center gap-8 md:grid-cols-[1fr_auto] md:gap-12">
           <div className="space-y-5">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Link Chatimall to your phone</h1>
+              <h1 className="text-[24px] font-extrabold leading-tight tracking-[-0.03em] text-[#16241e]">Link Chatimall to your phone</h1>
               <p className="mt-2 text-sm leading-relaxed text-ink-mute">
                 Open Chatimall on your phone, go to Settings, and link this desktop using the QR code or the code below.
               </p>
@@ -529,7 +568,20 @@ export function AuthScreen() {
           </div>
         </div>
       ) : (
-        <form onSubmit={verify} className="space-y-4">
+        <form onSubmit={verify} className="space-y-5">
+          <div className="text-center">
+            <h1 className="text-[24px] font-extrabold leading-tight tracking-[-0.03em] text-[#16241e]">
+              Check your email
+            </h1>
+            <p className="mt-2 text-[14.5px] leading-relaxed text-[#68746d]">
+              {phoneRecoveryMode
+                ? `If this number has an account with a verified email, a code was sent to that email. Phone +${phone.replace(/^\+/, '')}`
+                : <>Enter the code we sent to <span className="font-semibold text-[#3c4843]">{email}</span> for phone <span className="font-mono font-semibold text-[#3c4843]">+{phone.replace(/^\+/, '')}</span>.</>}
+            </p>
+            {devCode && (
+              <p className="mt-2 text-xs text-amber-700">Dev mode: your code is <b className="tabular-nums">{devCode}</b></p>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -540,21 +592,10 @@ export function AuthScreen() {
               setPhoneRecoveryMode(false);
               setError(null);
             }}
-            className="flex items-center gap-1 text-xs text-ink-mute hover:text-ink"
+            className="mx-auto flex items-center gap-1 text-[13px] font-medium text-[#8a968f] transition hover:text-ink"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> {phoneRecoveryMode ? 'Back' : 'Change email'}
           </button>
-          <div>
-            <h1 className="text-xl font-bold">Enter the code</h1>
-            <p className="text-sm text-ink-mute mt-1">
-              {phoneRecoveryMode
-                ? `If this number has an account with a verified email, a code was sent to that email. Phone +${phone.replace(/^\+/, '')}`
-                : `Sent to ${email} for phone +${phone.replace(/^\+/, '')}`}
-            </p>
-            {devCode && (
-              <p className="text-xs text-amber-700 mt-2">Dev mode: your code is <b className="tabular-nums">{devCode}</b></p>
-            )}
-          </div>
           <input
             autoFocus
             inputMode="numeric"
@@ -563,24 +604,24 @@ export function AuthScreen() {
             placeholder="123456"
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            className={`${inputCls} text-center tracking-[0.4em] text-lg tabular-nums`}
+            className={`${inputCls} text-center text-lg tabular-nums tracking-[0.4em]`}
           />
           {secondFactorRequired && (
-            <div>
-              <label htmlFor="account-security-pin" className="mb-1 block text-xs font-semibold text-ink-soft">Account security PIN</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa59f]" />
               <input
                 id="account-security-pin"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={12}
-                placeholder="6 to 12 digits"
+                placeholder="Account security PIN"
                 value={pin}
                 onChange={(event) => setPin(event.target.value.replace(/\D/g, ''))}
-                className={`${inputCls} text-center tracking-[0.3em] text-lg tabular-nums`}
+                className={`${inputCls} pl-11 text-center text-lg tabular-nums tracking-[0.3em]`}
               />
             </div>
           )}
-          {error && <p className="text-xs text-rose-600">{error}</p>}
+          {error && <p className="text-center text-[13px] font-semibold text-rose-600">{error}</p>}
           <button type="submit" disabled={busy} className={btnCls}>
             {busy && <Loader2 className="w-4 h-4 animate-spin" />} Verify
           </button>
@@ -588,14 +629,14 @@ export function AuthScreen() {
             type="button"
             disabled={cooldown > 0 || busy}
             onClick={() => phoneRecoveryMode ? void recoverWithPhone() : void sendPhoneEmailCode()}
-            className="w-full text-xs text-brand-600 disabled:text-gray-500"
+            className="w-full text-center text-[13px] font-semibold text-[#0d9460] transition disabled:text-[#8a968f]"
           >
             {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
           </button>
         </form>
       )}
-      <div className="mt-7 flex items-center justify-center gap-2 text-[0.95rem] text-[#5d6662]">
-        <ShieldCheck className="h-4 w-4 shrink-0 text-[#0f8a5f]" />
+      <div className="mt-7 flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#8a968f]">
+        <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#0fa958]" />
         <span className="text-center leading-snug">
           Your sign-in details are protected and used only to access your account.
         </span>
@@ -642,10 +683,10 @@ export function ProfileSetup({ onComplete }: { onComplete?: () => void }) {
 
   return (
     <Shell>
-      <form onSubmit={save} className="space-y-5">
-        <div>
-          <h1 className="text-xl font-bold">Set up your profile</h1>
-          <p className="text-sm text-ink-mute mt-1">This is how your friends will see you.</p>
+      <form onSubmit={save} className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-[24px] font-extrabold leading-tight tracking-[-0.03em] text-[#16241e]">Set up your profile</h1>
+          <p className="mt-2 text-[14.5px] leading-relaxed text-[#68746d]">This is how your friends will see you.</p>
         </div>
         <div className="flex justify-center">
           <button type="button" onClick={() => fileRef.current?.click()} className="relative">
