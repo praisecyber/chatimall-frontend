@@ -7,7 +7,6 @@ import {
   Loader2,
   Lock,
   Mail,
-  Mic,
   QrCode,
   RefreshCw,
   ShieldCheck,
@@ -38,25 +37,6 @@ function Shell({ children, wide = false }: { children: React.ReactNode; wide?: b
           </div>
           <div className="text-[12px] font-semibold uppercase tracking-[0.22em] text-[#7b8981]">
             Say it. Grow it.
-          </div>
-        </div>
-
-        <div className="relative mt-14 max-w-[340px] space-y-4">
-          <div className="flex items-start gap-3.5">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e6f5ed] text-[#0d9460]">
-              <Mic className="h-4 w-4" />
-            </span>
-            <p className="text-[14.5px] leading-relaxed text-[#5c6864]">
-              Voice notes, live rooms, and chats with the people you actually want to hear from.
-            </p>
-          </div>
-          <div className="flex items-start gap-3.5">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e6f5ed] text-[#0d9460]">
-              <Lock className="h-4 w-4" />
-            </span>
-            <p className="text-[14.5px] leading-relaxed text-[#5c6864]">
-              Sign in with your phone — verified by a one-time code, no password to remember.
-            </p>
           </div>
         </div>
       </aside>
