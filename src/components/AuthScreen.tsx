@@ -23,28 +23,10 @@ import CountryFlag from '@/components/CountryFlag';
 
 function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="flex min-h-[100svh] w-full bg-[#f7f8f6] text-ink">
-      {/* Desktop brand panel */}
-      <aside className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden border-r border-[#e7e9e5] bg-white p-10 lg:flex xl:w-[46%]">
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0fa958]/[0.07] blur-[110px]" />
-
-        <div className="relative flex flex-col items-center gap-6 text-center">
-          <div className="flex h-24 w-24 items-center justify-center rounded-[32px] bg-[#e6f5ed] shadow-[0_10px_30px_rgba(15,169,88,0.14)]">
-            <BrandMark size={62} />
-          </div>
-          <div className="text-4xl font-extrabold tracking-[-0.03em] text-[#14231c]">
-            Chat<span className="text-[#0fa958]">imall</span>
-          </div>
-          <div className="text-[12px] font-semibold uppercase tracking-[0.22em] text-[#7b8981]">
-            Say it. Grow it.
-          </div>
-        </div>
-      </aside>
-
-      {/* Form column */}
+    <div className="flex min-h-[100svh] w-full flex-col bg-[#f7f8f6] text-ink">
       <div className="flex min-w-0 flex-1 flex-col px-4 py-6 sm:px-8 sm:py-8">
         <main className={`mx-auto flex w-full flex-1 flex-col items-center justify-center py-6 ${wide ? 'max-w-[860px]' : 'max-w-[420px]'}`}>
-          <div className="mb-7 flex flex-col items-center gap-3.5 text-center lg:hidden">
+          <div className="mb-7 flex flex-col items-center gap-3.5 text-center">
             <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#e6f5ed] shadow-[0_6px_20px_rgba(15,169,88,0.12)]">
               <BrandMark size={46} />
             </div>
