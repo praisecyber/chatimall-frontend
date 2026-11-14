@@ -36,6 +36,11 @@ if (!fs.existsSync(path.join('node_modules', '@capacitor', 'cli'))) {
   run('npm', ['install', '-D', '@capacitor/cli']);
 }
 run('npx', ['vite', 'build']);
+const bundledApk = path.join('dist', 'downloads', 'Chatimall.apk');
+if (fs.existsSync(bundledApk)) {
+  fs.rmSync(bundledApk);
+  console.log('Excluded the previous APK from the Android web assets.');
+}
 if (!fs.existsSync('android')) run('npx', ['cap', 'add', 'android']);
 run('node', ['scripts/patch-android.mjs']);
 run('npx', ['cap', 'sync', 'android']);
