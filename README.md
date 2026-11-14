@@ -48,6 +48,11 @@ If normal sign-in fails, choose **Recover account using this phone**. Chatimall 
    - `VITE_GOOGLE_CLIENT_ID` = Google OAuth **Web application** client ID for Drive backups
 4. Deploy.
 
+The landing page's Android download button and QR code link to the APK attached to the
+[Chatimall GitHub Release](https://github.com/praisecyber/chatimall/releases/tag/v1.0.0), rather than bundling the
+large APK in the Vercel deployment. When publishing a newer APK, update `APK_DOWNLOAD_URL` in
+`src/components/LandingPage.tsx` to the new release asset URL, then push to redeploy the site.
+
 ## Google Drive chat backups
 
 The Settings → Chat backup screen stores password-encrypted chat history and the device encryption key in the signed-in user's Google Drive. Google Drive receives only the encrypted backup; Chatimall does not receive the backup password. Attachments remain in Chatimall storage and are not included in the backup file.

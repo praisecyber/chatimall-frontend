@@ -14,6 +14,9 @@ import {
   Send,
 } from 'lucide-react';
 
+const APK_DOWNLOAD_URL =
+  'https://github.com/praisecyber/chatimall/releases/download/v1.0.0/Chatimall.apk';
+
 function LandingPage({ onDownload }: { onDownload: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -533,8 +536,7 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
                 <span className="pc-install-go">Open web app →</span>
               </button>
               <a
-                href="/downloads/Chatimall.apk"
-                download="Chatimall.apk"
+                href={APK_DOWNLOAD_URL}
                 onClick={() => setInstallOpen(false)}
                 className="pc-install-option no-underline"
                 data-testid="button-download-apk"
@@ -551,7 +553,7 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
             </div>
             <div className="pc-install-qr">
               <QRCodeSVG
-                value={`${window.location.origin}/downloads/Chatimall.apk`}
+                value={APK_DOWNLOAD_URL}
                 size={76}
                 level="M"
                 title="Scan to download Chatimall for Android"
