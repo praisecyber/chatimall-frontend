@@ -51,7 +51,24 @@ If normal sign-in fails, choose **Recover account using this phone**. Chatimall 
 The landing page's Android download button and QR code link to the APK attached to the
 [Chatimall GitHub Release](https://github.com/praisecyber/chatimall/releases/tag/v1.0.0), rather than bundling the
 large APK in the Vercel deployment. When publishing a newer APK, update `APK_DOWNLOAD_URL` in
-`src/components/LandingPage.tsx` to the new release asset URL, then push to redeploy the site.
+`src/components/DownloadPage.tsx` to the new release asset URL, then push to redeploy the site.
+
+## Windows desktop installer (Electron)
+
+The Windows app is an Electron desktop client for the deployed Chatimall web app. It opens the production site at
+`https://praisecyber-chatimall-frontend.vercel.app/`, so it uses the same sign-in and backend as the browser and
+requires an internet connection.
+
+On Windows, build the x64 NSIS installer from the `frontend` directory:
+
+```bash
+npm install
+npm run build:windows
+```
+
+The installer is written to `frontend/release/Chatimall-Setup.exe`. Attach that file to a GitHub Release with the
+asset name `Chatimall-Setup.exe`; the download page links to the latest release asset. Electron external links open
+in the system browser, and the desktop window does not expose Node.js to the web app.
 
 ## Google Drive chat backups
 

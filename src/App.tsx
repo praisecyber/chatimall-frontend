@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
 import LandingPage from '@/components/LandingPage';
+import DownloadPage from '@/components/DownloadPage';
 import MobileApp from '@/components/MobileApp';
 import AdminPanel from '@/components/AdminPanel';
 import { AuthProvider, useAuth } from '@/lib/auth';
@@ -9,7 +10,7 @@ import { isNative, unregisterPush } from '@/lib/native';
 import { AuthScreen, ProfileSetup, FullScreenSpinner } from '@/components/AuthScreen';
 import type { Screen, Chat } from '@/types';
 
-type View = 'landing' | 'app' | 'admin';
+type View = 'landing' | 'download' | 'app' | 'admin';
 
 const ADMIN_AUTHORIZED_PHONES = ['09121598033', '2349121598033', '+2349121598033'];
 
@@ -39,6 +40,9 @@ function App() {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.toLowerCase();
       const params = new URLSearchParams(window.location.search);
+      if (hash === '#download') {
+        return 'download';
+      }
       if (hash === '#app' || params.get('view') === 'app') {
         return 'app';
       }
@@ -70,6 +74,8 @@ function App() {
         }
       } else if (window.location.hash === '#app') {
         setView('app');
+      } else if (window.location.hash === '#download') {
+        setView('download');
       } else if (window.location.hash === '' || window.location.hash === '#top') {
         setView('landing');
       }
@@ -83,6 +89,11 @@ function App() {
     setView('app');
     setScreen('chats');
     setActiveChat(null);
+  };
+
+  const openDownloadPage = () => {
+    window.location.hash = 'download';
+    setView('download');
   };
 
   const backToLanding = () => {
@@ -129,7 +140,11 @@ function App() {
   }
 
   if (view === 'landing') {
-    return <LandingPage onDownload={openApp} />;
+    return <LandingPage onDownload={openApp} onDownloadPage={openDownloadPage} />;
+  }
+
+  if (view === 'download') {
+    return <DownloadPage onOpenWebApp={openApp} onBack={backToLanding} />;
   }
 
   const isAdminScreen = screen === 'admin';

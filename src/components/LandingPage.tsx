@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { APP_NAME } from '@/brand';
-import { QRCodeSVG } from 'qrcode.react';
 import {
   X,
   Menu,
   Download,
-  Monitor,
-  Smartphone,
   Heart,
   Plus,
   ChevronDown,
@@ -14,14 +11,16 @@ import {
   Send,
 } from 'lucide-react';
 
-const APK_DOWNLOAD_URL =
-  'https://github.com/praisecyber/chatimall/releases/download/v1.0.0/Chatimall.apk';
-
-function LandingPage({ onDownload }: { onDownload: () => void }) {
+function LandingPage({
+  onDownload,
+  onDownloadPage,
+}: {
+  onDownload: () => void;
+  onDownloadPage: () => void;
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [installOpen, setInstallOpen] = useState(false);
 
   useEffect(() => {
     let scrollEndTimer = 0;
@@ -37,8 +36,6 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
       window.removeEventListener('scroll', onScroll);
     };
   }, []);
-
-  const openInstall = () => setInstallOpen(true);
 
   return (
     <>
@@ -62,7 +59,7 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
               </div>
 
               <div className="pc-nav-right">
-                <button onClick={openInstall} className="pc-button pc-button-secondary" style={{ padding: '10px 18px' }}>
+                <button onClick={onDownloadPage} className="pc-button pc-button-secondary" style={{ padding: '10px 18px' }}>
                   <Download className="w-3.5 h-3.5" />
                   Download
                 </button>
@@ -106,7 +103,7 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
                     type="button"
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      openInstall();
+                      onDownloadPage();
                     }}
                     className="pc-button pc-button-secondary"
                     style={{ width: '100%', justifyContent: 'center' }}
@@ -167,7 +164,7 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
                     Open Web App
                     <ArrowUpRight className="w-4 h-4" />
                   </button>
-                  <button onClick={openInstall} className="pc-button pc-button-secondary">
+                  <button onClick={onDownloadPage} className="pc-button pc-button-secondary">
                     <Download className="w-4 h-4" />
                     Download APK
                   </button>
@@ -465,7 +462,7 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
                   {APP_NAME} is ready to carry around. Voice notes, live rooms, and groups
                   that protect anonymous voices — all in your pocket today.
                 </p>
-                <button onClick={openInstall} className="pc-button pc-button-primary" style={{ marginTop: '28px' }}>
+                <button onClick={onDownloadPage} className="pc-button pc-button-primary" style={{ marginTop: '28px' }}>
                   <Download className="w-4 h-4" />
                   Get {APP_NAME}
                 </button>
@@ -505,65 +502,6 @@ function LandingPage({ onDownload }: { onDownload: () => void }) {
         </footer>
       </div>
 
-      {/* Install Dialog Modal */}
-      {installOpen && (
-        <div className="pc-install-overlay pc-theme-milk" onClick={() => setInstallOpen(false)}>
-          <div className="pc-install-dialog" onClick={(e) => e.stopPropagation()}>
-            <button className="pc-install-close" onClick={() => setInstallOpen(false)}>
-              <X className="w-4 h-4" />
-            </button>
-            <p className="pc-kicker pc-mono">Take the room with you</p>
-            <h2 className="pc-install-title">Choose your way in.</h2>
-            <p className="pc-install-desc">
-              Choose the desktop web app or install the Android app from its APK.
-            </p>
-            <div className="pc-install-grid">
-              <button
-                onClick={() => {
-                  setInstallOpen(false);
-                  onDownload();
-                }}
-                className="pc-install-option"
-                data-testid="button-open-desktop-app"
-              >
-                <div className="flex items-start gap-3">
-                  <Monitor className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
-                  <div>
-                    <p className="pc-install-option-title">Desktop / Web app</p>
-                    <p className="pc-install-option-desc">Use {APP_NAME} in your browser. No installer needed.</p>
-                  </div>
-                </div>
-                <span className="pc-install-go">Open web app →</span>
-              </button>
-              <a
-                href={APK_DOWNLOAD_URL}
-                onClick={() => setInstallOpen(false)}
-                className="pc-install-option no-underline"
-                data-testid="button-download-apk"
-              >
-                <div className="flex items-start gap-3">
-                  <Smartphone className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
-                  <div>
-                    <p className="pc-install-option-title">Android app (APK)</p>
-                    <p className="pc-install-option-desc">Download the installer for Android devices.</p>
-                  </div>
-                </div>
-                <span className="pc-install-go">Download APK →</span>
-              </a>
-            </div>
-            <div className="pc-install-qr">
-              <QRCodeSVG
-                value={APK_DOWNLOAD_URL}
-                size={76}
-                level="M"
-                title="Scan to download Chatimall for Android"
-                className="shrink-0 rounded-lg bg-white p-1.5"
-              />
-              <p className="pc-install-qr-text pc-mono">Scan with your phone to get the Android APK</p>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
