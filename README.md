@@ -68,7 +68,8 @@ npm run build:windows
 
 The installer is written to `frontend/release/Chatimall-Setup.exe`. Attach that file to a GitHub Release with the
 asset name `Chatimall-Setup.exe`; the download page links to the latest release asset. Electron external links open
-in the system browser, and the desktop window does not expose Node.js to the web app.
+in the system browser, and the desktop window does not expose Node.js to the web app. The NSIS installer includes a
+branded welcome and completion page, Chatimall icons, a custom sidebar, and an optional install-directory step.
 
 ## Google Drive chat backups
 

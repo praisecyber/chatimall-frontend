@@ -61,6 +61,7 @@
     "files": ["electron/main.cjs", "!node_modules/**"],
     "npmRebuild": false,
     "win": {
+      "icon": "assets/images/chatimall.ico",
       "target": [
         {
           "target": "nsis",
@@ -74,7 +75,12 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "assets/images/chatimall.ico",
+      "uninstallerIcon": "assets/images/chatimall.ico",
+      "installerSidebar": "assets/images/chatimall-installer-sidebar.bmp",
+      "uninstallerSidebar": "assets/images/chatimall-installer-sidebar.bmp",
+      "include": "electron/installer.nsh"
     }
   }
 }
