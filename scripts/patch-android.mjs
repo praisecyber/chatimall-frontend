@@ -2,6 +2,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Load .env manually so ADMOB_ANDROID_APP_ID (a non-VITE_ var) is available when this
+// script runs as plain `node` (Vite only auto-loads .env for Vite-managed processes).
+const envPath = path.join(process.cwd(), '.env');
+if (fs.existsSync(envPath)) {
+  for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq < 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim().replace(/^['"]|['"]$/g, '');
+    if (key && process.env[key] === undefined) process.env[key] = value;
+  }
+}
+
 function replaceOrThrow(source, pattern, replacement, description) {
   const updated = source.replace(pattern, replacement);
   if (updated === source) {
@@ -93,6 +108,24 @@ if (!xml.includes('android.hardware.camera"')) {
   xml = xml.replace('</manifest>', '    <uses-feature android:name="android.hardware.camera" android:required="false" />\n</manifest>');
   added++;
 }
+// AdMob refuses to start without an APPLICATION_ID <meta-data> inside <application>.
+// Use the real id when provided, otherwise Google's official test app id so debug builds still work.
+const admobAppId = process.env.ADMOB_ANDROID_APP_ID || 'ca-app-pub-3940256099942544~3347511713';
+if (!xml.includes('com.google.android.gms.ads.APPLICATION_ID')) {
+  if (!xml.includes('</application>')) {
+    throw new Error('Could not patch Android AdMob application id: no </application> element found.');
+  }
+  xml = xml.replace(
+    '</application>',
+    `        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${admobAppId}" />\n    </application>`
+  );
+  added++;
+  console.log(
+    process.env.ADMOB_ANDROID_APP_ID
+      ? `AdMob APPLICATION_ID set to ${admobAppId}.`
+      : 'AdMob APPLICATION_ID set to the Google TEST app id (set ADMOB_ANDROID_APP_ID for real ads).'
+  );
+}
 writeIfChanged(manifest, originalManifest, xml);
 console.log(`AndroidManifest.xml patched (${added} entries added).`);
 
@@ -106,6 +139,16 @@ if (!rootBuild.includes(repository)) {
     /allprojects\s*\{\s*repositories\s*\{/,
     (repositoriesBlock) => `${repositoriesBlock}\n        ${repository}`,
     'TikTok Maven repository'
+  );
+}
+// The @capacitor-firebase/* plugins (Analytics, Remote Config) and push need the Google Services
+// Gradle plugin on the classpath. Capacitor usually ships this already — add it only if missing.
+if (!rootBuild.includes('com.google.gms:google-services')) {
+  rootBuild = replaceOrThrow(
+    rootBuild,
+    /(classpath\s+['"]com\.android\.tools\.build:gradle:[^'"]+['"])/,
+    (classpathLine) => `${classpathLine}\n        classpath 'com.google.gms:google-services:4.4.2'`,
+    'Google Services Gradle plugin classpath'
   );
 }
 writeIfChanged(rootBuildFile, originalRootBuild, rootBuild);
@@ -155,6 +198,11 @@ for (const dependency of [
       'TikTok Share Kit dependency'
     );
   }
+}
+// Apply the Google Services plugin only when google-services.json is present, so a checkout
+// without it still builds (Analytics/Remote Config/push simply stay inert).
+if (!appBuild.includes('com.google.gms.google-services')) {
+  appBuild += `\n// Added by scripts/patch-android.mjs — process google-services.json when it exists.\nif (file('google-services.json').exists()) {\n    apply plugin: 'com.google.gms.google-services'\n}\n`;
 }
 writeIfChanged(appBuildFile, originalAppBuild, appBuild);
 
@@ -230,7 +278,8 @@ if (!fs.existsSync(gs)) {
     fs.copyFileSync('../google-services.json', gs);
     console.log('Copied ../google-services.json into android/app/google-services.json.');
   } else {
-    console.warn('\nNOTE: android/app/google-services.json is missing. The app will build, but push notifications');
-    console.warn('will not work until you add it (see ANDROID.md, step 3).');
+    console.warn('\nNOTE: android/app/google-services.json is missing. The app will still build, but push');
+    console.warn('notifications, Firebase Analytics and Remote Config will not work until you add it');
+    console.warn('(see ANDROID.md, sections 4 and 8).');
   }
 }

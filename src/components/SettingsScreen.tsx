@@ -46,11 +46,13 @@ import {
   Monitor,
   Download,
   Upload,
+  Gift,
 } from 'lucide-react';
 import type { Chat, SettingsContact, SettingsPreferences, StarredMessageItem, StorageUsage, UserProfile } from '@/types';
 import { secureSetItem } from '@/lib/secure';
 import { listDriveBackups, restoreDriveBackup, uploadDriveBackup } from '@/lib/backup';
 import type { GoogleDriveBackup } from '@/lib/backup';
+import { getSupporterBadgeUntil, showRewardedInterstitial } from '@/lib/ads';
 
 interface SettingsScreenProps {
   onWallpaperChange?: (wallpaper: string) => void;
@@ -261,6 +263,8 @@ export default function SettingsScreen({
   const [driveBackups, setDriveBackups] = useState<GoogleDriveBackup[]>([]);
   const [loadingDriveBackups, setLoadingDriveBackups] = useState(false);
   const [backupError, setBackupError] = useState<string | null>(null);
+  const [supporterBadgeUntil, setSupporterBadgeUntil] = useState<number | null>(() => getSupporterBadgeUntil());
+  const [watchingRewardedAd, setWatchingRewardedAd] = useState(false);
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -433,6 +437,22 @@ export default function SettingsScreen({
     showToast(permission === 'granted' ? 'Notifications enabled' : permission === 'unsupported' ? 'Notifications are not available on this device' : 'Notifications were not enabled');
   };
 
+  const watchRewardedAd = async () => {
+    if (watchingRewardedAd) return;
+    setWatchingRewardedAd(true);
+    try {
+      const reward = await showRewardedInterstitial();
+      if (reward) {
+        setSupporterBadgeUntil(getSupporterBadgeUntil());
+        showToast('Thanks for supporting us! Supporter badge active for 1 hour.');
+      } else {
+        showToast('No reward was granted. Try again.');
+      }
+    } finally {
+      setWatchingRewardedAd(false);
+    }
+  };
+
   const applyDeviceAppLock = async (enabled: boolean) => {
     if (!isNative()) throw new Error('App lock is available in the installed app.');
     if (enabled && !await authenticateDevice('Confirm app lock')) throw new Error('Device authentication was not completed.');
@@ -564,6 +584,7 @@ export default function SettingsScreen({
         { icon: Bell, label: 'Notifications', color: 'emerald', keywords: 'push sound alerts permission', onClick: () => setActiveModal('notifications') },
         { icon: Palette, label: 'Chat Wallpaper', color: 'emerald', keywords: 'appearance background', badge: settings.appearance.wallpaper !== 'default' ? settings.appearance.wallpaper : undefined, onClick: () => setActiveModal('wallpaper') },
         { icon: Languages, label: 'Voice Note Translation', color: 'emerald', keywords: 'translate language voice notes hausa yoruba igbo twi', badge: settings.translation.mode !== 'off' ? TRANSLATION_LANGUAGES.find((l) => l.code === settings.translation.language)?.name : 'Off', onClick: () => setActiveModal('translation') },
+        { icon: Gift, label: 'Support Us', color: 'emerald', keywords: 'watch ad rewarded supporter badge help us', badge: supporterBadgeUntil && supporterBadgeUntil > Date.now() ? `${Math.ceil((supporterBadgeUntil - Date.now()) / 60000)}m left` : (watchingRewardedAd ? 'Loading…' : 'Watch ad'), onClick: () => void watchRewardedAd() },
       ],
     },
     {

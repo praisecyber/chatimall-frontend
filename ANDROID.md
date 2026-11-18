@@ -93,3 +93,35 @@ different from local debug fingerprints.
 In the Android app, open **Settings → TikTok account → Choose photos or video**. Choose at least two
 photos or one MP4 video, then complete or cancel the flow inside TikTok. Media is selected with
 Android's system picker and remains user-controlled.
+
+## 8. AdMob + Firebase Analytics
+The Android app reports analytics to the Firebase **app** stream (not the web stream) and shows AdMob
+banners/interstitials. Both are wired by `scripts/patch-android.mjs` at build time, so re-run
+`npm run apk:debug` (or `npm run android:sync`) after changing anything here.
+
+**Analytics + Remote Config.** These go through the `@capacitor-firebase/analytics` and
+`@capacitor-firebase/remote-config` plugins, which require the Google Services Gradle plugin to read
+`android/app/google-services.json` (see section 4). The patch script adds the plugin classpath and
+applies `com.google.gms.google-services` **only when `google-services.json` exists**, so a checkout
+without it still builds — analytics and Remote Config simply stay inert.
+
+**AdMob APPLICATION_ID (build-time env, NOT a VITE_ variable).** AdMob refuses to start without a
+`com.google.android.gms.ads.APPLICATION_ID` `<meta-data>` entry in `AndroidManifest.xml`. The patch
+script injects it from the `ADMOB_ANDROID_APP_ID` environment variable, falling back to Google's
+official test app id (`ca-app-pub-3940256099942544~3347511713`) when it is not set. Set it in the same
+PowerShell session that builds the APK:
+```powershell
+$env:ADMOB_ANDROID_APP_ID = 'ca-app-pub-<your-id>~<your-id>'
+npm run apk:debug
+```
+
+**AdMob ad unit IDs (VITE_ variables).** The banner and interstitial ad unit ids are read at build
+time from `VITE_ADMOB_ANDROID_BANNER_ID` and `VITE_ADMOB_ANDROID_INTERSTITIAL_ID` (see `.env.example`).
+When they are empty the app uses Google's public test ad units, which is correct for development.
+Replace them with real ad unit ids before a Play Store release and rebuild.
+
+Ads only run on Android; on the web and in the Electron desktop app every ad call is a no-op.
+Whether the banner, the interstitial, and the message-count interval are shown is controlled by
+Firebase Remote Config (`ads_banner_enabled`, `ads_interstitial_enabled`,
+`ads_interstitial_after_messages`), so you can turn them off without shipping a new build.
+

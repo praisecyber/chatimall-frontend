@@ -4,6 +4,7 @@ import { ApiError, api, assetUrl, getToken, setToken, setUnauthorizedHandler, st
 import { connectSocket, disconnectSocket } from '@/lib/socket';
 import { uploadFile } from '@/lib/api';
 import { publishPublicKey } from '@/lib/e2ee';
+import { setAnalyticsUser, setAnalyticsUserProperties } from '@/lib/analytics';
 import type { DbProfile } from '@/types';
 
 interface AuthValue {
@@ -56,6 +57,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
     return () => setUnauthorizedHandler(null);
   }, [clear]);
+
+  // Mirror the signed-in identity into analytics; clears the user id on sign-out.
+  useEffect(() => {
+    if (profile) {
+      setAnalyticsUser(profile.id);
+      setAnalyticsUserProperties({
+        is_admin: Boolean(profile.is_admin),
+        phone_verified: Boolean(profile.phone_verified),
+        email_verified: Boolean(profile.email_verified),
+      });
+    } else {
+      setAnalyticsUser(null);
+    }
+  }, [profile]);
 
   const requestOtp = useCallback(async (phone: string) => {
     const res = await api<{ ok: boolean; dev_code?: string }>('/api/auth/otp/request', { body: { phone } });

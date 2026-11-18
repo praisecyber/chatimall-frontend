@@ -32,6 +32,8 @@ import { fetchMessages, fetchPeerReadAt, fetchStarredMessages, fetchVoiceTransla
 import { decryptMediaUrl, decryptMessageBody, getPeerKeyStatus, trustPeerKey } from '@/lib/e2ee';
 import { formatClock, formatDuration } from '@/lib/format';
 import { translateAudioWithGemini, speakTranslatedSpeech } from '@/lib/geminiVoiceTranslation';
+import { trackMessageSent, trackScreen } from '@/lib/analytics';
+import { countOpenedMessage, showInterstitialIfDue } from '@/lib/ads';
 
 
 interface ChatConversationProps {
@@ -281,6 +283,7 @@ export default function ChatConversation({
       addRow(decoded);
       if (raw.sender_id !== userId) {
         setPeerTyping(false);
+        countOpenedMessage();
         void markRead(chat.id, userId);
       }
     };
@@ -309,6 +312,15 @@ export default function ChatConversation({
       socket.off('connect', onReconnect);
     };
   }, [chat.id, userId, addRow, decodeIncomingMessage]);
+
+  // Report the open chat and pace the message-interval interstitial.
+  useEffect(() => {
+    trackScreen('chat');
+    countOpenedMessage();
+    return () => {
+      void showInterstitialIfDue('chat_closed');
+    };
+  }, [chat.id]);
 
   // ---- UI messages derived from DB rows ----
   const messages: Message[] = useMemo(
@@ -357,6 +369,9 @@ export default function ChatConversation({
     connectSocket().emit('typing', { conversation_id: chat.id });
   };
 
+  const noteMessageSent = () =>
+    trackMessageSent({ conversationType: chat.isGroup ? 'group' : 'direct' });
+
   const sendMessage = async () => {
     const body = input.trim();
     if (!body) return;
@@ -366,6 +381,7 @@ export default function ChatConversation({
     setError(null);
     try {
       addRow(await sendText(chat.id, body, { userId: chat.otherUserId, publicKey: chat.otherPublicKey ?? null }));
+      noteMessageSent();
     } catch (err) {
       setInput(body);
       setError(err instanceof Error ? err.message : 'Message failed to send. Check your connection and try again.');
@@ -393,6 +409,7 @@ export default function ChatConversation({
           body: type === 'file' ? file.name : '',
         })
       );
+      noteMessageSent();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed.');
     }
@@ -457,6 +474,7 @@ export default function ChatConversation({
             durationSecs: secs,
           })
         );
+        noteMessageSent();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not send voice note.');
       }

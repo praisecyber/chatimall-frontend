@@ -20,6 +20,7 @@ import { ApiError, api } from '@/lib/http';
 import { initialsAvatar, normalizePhone } from '@/lib/format';
 import { Country, COUNTRIES, DEFAULT_COUNTRY } from '@/lib/countries';
 import CountryFlag from '@/components/CountryFlag';
+import { trackLogin, trackSignUp } from '@/lib/analytics';
 
 function Shell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
@@ -120,6 +121,7 @@ export function AuthScreen() {
         } else if (result.status === 'approved' && result.token) {
           terminal = true;
           await completeLinkedSignIn(result.token, linkChallenge.link_id);
+          trackLogin('device');
         }
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : 'Could not check the linking request.');
@@ -264,6 +266,7 @@ export function AuthScreen() {
       } else {
         await verifyPhoneEmailOtp(phone, email, code.trim(), secondFactorRequired ? pin : undefined);
       }
+      trackLogin(phoneRecoveryMode ? 'phone_recovery' : 'phone');
       // on success the auth context takes over and the app opens
     } catch (err) {
       if (err instanceof ApiError && err.code === 'SECOND_FACTOR_REQUIRED') {
@@ -636,6 +639,8 @@ export function ProfileSetup({ onComplete }: { onComplete?: () => void }) {
     setBusy(true);
     try {
       await updateProfile({ name: name.trim(), avatar_url: avatarUrl });
+      // ProfileSetup only runs for accounts without a name, i.e. brand-new sign-ups.
+      trackSignUp('phone');
       onComplete?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save');

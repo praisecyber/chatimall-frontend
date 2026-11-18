@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image as ImageIcon, Loader2, MessageCircle, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
+import { Image as ImageIcon, Loader2, MessageCircle, Package, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
 import type { Chat, Listing } from '@/types';
 import {
+  ApiError,
   createListing,
+  createOrder,
   deleteListing,
   fetchChannels,
   fetchChats,
   fetchGroups,
   fetchMarketplace,
+  openCheckout,
   requestToBuy,
   sendText,
 } from '@/lib/api';
 import { formatChatTime } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { trackBeginCheckout, trackContactSeller, trackOrderCreated, trackViewItem } from '@/lib/analytics';
 
 interface Props {
   onOpenChat: (chat: Chat) => void;
+  onOpenOrders?: () => void;
 }
 
 interface RoomOption {
@@ -23,12 +28,25 @@ interface RoomOption {
   name: string;
 }
 
-export default function MarketplaceScreen({ onOpenChat }: Props) {
+/** Free-text price ("₦15,000", "$12.50", "1,299") → integer minor units, or null when there is no
+ * usable positive number. Everything except digits, '.' and '-' is stripped, then we round. */
+function parsePriceToCents(raw: string): number | null {
+  const cleaned = raw.replace(/[^0-9.-]/g, '');
+  const value = Number.parseFloat(cleaned);
+  if (!Number.isFinite(value)) return null;
+  const cents = Math.round(value * 100);
+  // Mirror the server's guard: only a positive amount inside its accepted range is a payable price.
+  if (cents <= 0 || cents > 100000000) return null;
+  return cents;
+}
+
+export default function MarketplaceScreen({ onOpenChat, onOpenOrders }: Props) {
   const { userId } = useAuth();
   const [items, setItems] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [buying, setBuying] = useState<string | null>(null);
 
   const [showSell, setShowSell] = useState(false);
   const [rooms, setRooms] = useState<RoomOption[]>([]);
@@ -40,6 +58,14 @@ export default function MarketplaceScreen({ onOpenChat }: Props) {
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Record one view_item per listing per mount (a tap on the card counts as opening it).
+  const viewedRef = useRef<Set<string>>(new Set());
+  const markViewed = (l: Listing) => {
+    if (viewedRef.current.has(l.id)) return;
+    viewedRef.current.add(l.id);
+    trackViewItem({ id: l.id, name: l.title });
+  };
 
   const flash = (m: string) => {
     setToast(m);
@@ -82,7 +108,15 @@ export default function MarketplaceScreen({ onOpenChat }: Props) {
     setPosting(true);
     setError(null);
     try {
-      await createListing(room.id, { title: title.trim(), description: description.trim(), price: price.trim(), file: file ?? undefined });
+      // A parseable price makes the listing buyable in-app; otherwise it stays message-only.
+      const priceCents = parsePriceToCents(price);
+      await createListing(room.id, {
+        title: title.trim(),
+        description: description.trim(),
+        price: price.trim(),
+        ...(priceCents !== null ? { priceCents, currency: 'USD' } : {}),
+        file: file ?? undefined,
+      });
       setTitle('');
       setPrice('');
       setDescription('');
@@ -95,10 +129,11 @@ export default function MarketplaceScreen({ onOpenChat }: Props) {
     setPosting(false);
   };
 
-  // Connect to the seller: open (or reuse) a private chat and drop in a starter message.
-  // No money moves through the app — the buyer and seller settle it between themselves.
+  // Message-only path: open (or reuse) a private chat and drop in a starter message. This route
+  // never touches money — in-app escrow checkout (below) is a separate, opt-in flow.
   const ask = async (l: Listing) => {
     setConnecting(l.id);
+    trackContactSeller({ listingId: l.id, title: l.title });
     try {
       const { conversationId, starterMessage } = await requestToBuy(l.id);
       await sendText(conversationId, starterMessage);
@@ -121,6 +156,34 @@ export default function MarketplaceScreen({ onOpenChat }: Props) {
     }
   };
 
+  // Escrow checkout: create the order server-side, then send the buyer to OPay. We surface the
+  // Orders screen first so, on Android, the buyer lands back on live status once they return.
+  const buy = async (l: Listing) => {
+    if (!(typeof l.priceCents === 'number' && l.priceCents > 0)) return;
+    setBuying(l.id);
+    trackBeginCheckout({ amountMajor: l.priceCents / 100, currency: l.currency });
+    try {
+      const order = await createOrder(l.id);
+      trackOrderCreated({
+        orderReference: order.reference,
+        amountMajor: order.amountCents / 100,
+        currency: order.currency,
+      });
+      onOpenOrders?.();
+      if (order.checkoutUrl) openCheckout(order.checkoutUrl);
+      else flash('Order created — open Orders to finish paying.');
+    } catch (err) {
+      // A pending order already exists for this listing: point the buyer at it rather than erroring.
+      if (err instanceof ApiError && err.code === 'ORDER_PENDING') {
+        flash('You already have a pending order for this item — opening your orders.');
+        onOpenOrders?.();
+      } else {
+        flash(err instanceof Error ? err.message : 'Could not start checkout.');
+      }
+    }
+    setBuying(null);
+  };
+
   return (
     <div className="flex flex-col h-full relative select-none bg-paper">
       {toast && (
@@ -132,15 +195,23 @@ export default function MarketplaceScreen({ onOpenChat }: Props) {
       <div className="bg-paper px-4 pt-12 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h1 className="text-[26px] font-extrabold text-ink tracking-tight">Marketplace</h1>
-          <button
-            onClick={() => void openSell()}
-            className="h-10 px-3.5 flex items-center gap-1.5 rounded-full bg-brand-50 hover:bg-brand-100 active:scale-95 text-brand-700 text-xs font-bold transition-all"
-          >
-            <Plus className="w-4 h-4" /> Sell
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onOpenOrders?.()}
+              className="h-10 px-3.5 flex items-center gap-1.5 rounded-full bg-paper-mist hover:bg-brand-50 active:scale-95 text-ink-soft text-xs font-bold transition-all"
+            >
+              <Package className="w-4 h-4" /> Orders
+            </button>
+            <button
+              onClick={() => void openSell()}
+              className="h-10 px-3.5 flex items-center gap-1.5 rounded-full bg-brand-50 hover:bg-brand-100 active:scale-95 text-brand-700 text-xs font-bold transition-all"
+            >
+              <Plus className="w-4 h-4" /> Sell
+            </button>
+          </div>
         </div>
         <p className="text-[11px] text-ink-mute mt-1">
-          Things your groups and channels are selling. We only connect you — you pay the seller directly, never through the app.
+          Things your groups and channels are selling. Message the seller, or pay securely in-app when a price is set.
         </p>
       </div>
 
@@ -161,8 +232,9 @@ export default function MarketplaceScreen({ onOpenChat }: Props) {
         )}
         {items.map((l) => {
           const mine = l.sellerId === userId;
+          const canBuy = !mine && typeof l.priceCents === 'number' && l.priceCents > 0;
           return (
-            <div key={l.id} className="rounded-2xl bg-white ring-1 ring-black/[0.05] shadow-soft overflow-hidden">
+            <div key={l.id} onClick={() => markViewed(l)} className="rounded-2xl bg-white ring-1 ring-black/[0.05] shadow-soft overflow-hidden">
               {l.photoUrl && <img src={l.photoUrl} alt={l.title} className="w-full max-h-56 object-cover" loading="lazy" />}
               <div className="p-3.5 space-y-1.5">
                 <div className="flex items-start justify-between gap-3">
@@ -170,6 +242,11 @@ export default function MarketplaceScreen({ onOpenChat }: Props) {
                   {l.price && <span className="text-sm font-extrabold text-brand-700 flex-shrink-0">{l.price}</span>}
                 </div>
                 {l.description && <p className="text-[13px] text-ink-mute leading-relaxed">{l.description}</p>}
+                {!mine && !canBuy && (
+                  <p className="text-[11px] text-ink-faint">
+                    In-app payment isn’t available — the seller hasn’t set a payable price. Use “Message seller”.
+                  </p>
+                )}
                 <div className="flex items-center justify-between pt-1.5">
                   <span className="text-[11px] text-ink-faint">{formatChatTime(l.createdAt)}</span>
                   {mine ? (
@@ -177,14 +254,30 @@ export default function MarketplaceScreen({ onOpenChat }: Props) {
                       <Trash2 className="w-3.5 h-3.5" /> Remove
                     </button>
                   ) : (
-                    <button
-                      onClick={() => void ask(l)}
-                      disabled={connecting === l.id}
-                      className="px-3.5 py-2 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-60 shadow-lift"
-                    >
-                      {connecting === l.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />}
-                      Message seller
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {canBuy && (
+                        <button
+                          onClick={() => void buy(l)}
+                          disabled={buying === l.id}
+                          className="px-3.5 py-2 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-60 shadow-lift"
+                        >
+                          {buying === l.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShoppingBag className="w-3.5 h-3.5" />}
+                          Buy now
+                        </button>
+                      )}
+                      <button
+                        onClick={() => void ask(l)}
+                        disabled={connecting === l.id}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-60 ${
+                          canBuy
+                            ? 'bg-paper-mist text-ink'
+                            : 'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lift'
+                        }`}
+                      >
+                        {connecting === l.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />}
+                        Message seller
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -234,6 +327,10 @@ export default function MarketplaceScreen({ onOpenChat }: Props) {
                 placeholder="Price (for example ₦15,000)"
                 className="w-full px-3.5 py-3 rounded-2xl bg-paper-mist border border-transparent focus:bg-white focus:border-brand-600/30 text-sm text-ink outline-none transition-colors"
               />
+              <p className="text-[11px] text-ink-faint -mt-1.5">
+                Include a plain number (for example <span className="font-semibold text-ink-soft">15000</span>) so buyers can pay in-app.
+                Without one, the listing stays message-only.
+              </p>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

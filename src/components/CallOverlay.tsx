@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Phone, RefreshCw, Shield } from 'lucide-react';
 import { useCall } from '@/lib/calls';
+import { trackCallStarted } from '@/lib/analytics';
 
 function fmt(secs: number) {
   const m = Math.floor(secs / 60);
@@ -25,6 +26,22 @@ export default function CallOverlay() {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [call.phase]);
+
+  // Report one `call_started` per call: when we place an outgoing call, or when an incoming
+  // call is answered (phase becomes 'connected'). A ref keyed on the call id stops the
+  // outgoing -> connecting -> connected progression from logging more than once.
+  const trackedCallRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (call.phase === 'idle') {
+      trackedCallRef.current = null;
+      return;
+    }
+    if (call.phase !== 'outgoing' && call.phase !== 'connected') return;
+    const id = call.callId ?? call.peer?.id ?? null;
+    if (!id || trackedCallRef.current === id) return;
+    trackedCallRef.current = id;
+    trackCallStarted({ kind: call.type });
+  }, [call.phase, call.callId, call.peer, call.type]);
 
   if (call.phase === 'idle') {
     return call.notice ? (

@@ -80,7 +80,9 @@ export async function api<T>(path: string, opts: ApiOptions = {}): Promise<T> {
     const errorData = data && typeof data === 'object' ? data as { error?: string; message?: string } : null;
     throw new ApiError(errorData?.message || errorData?.error || `Request failed (${res.status})`, res.status, errorData?.error ?? 'ERROR');
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+  // Reject responses that aren't JSON objects. Arrays are valid too: most list endpoints (chats,
+  // listings, /api/orders/mine, …) return a bare JSON array rather than an envelope.
+  if (!data || typeof data !== 'object') {
     throw new ApiError(
       'The server returned an invalid response. Check the API URL configured for this app.',
       res.status,

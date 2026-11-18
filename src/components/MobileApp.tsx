@@ -28,8 +28,11 @@ import ChatConversation from '@/components/ChatConversation';
 import GroupsScreen from '@/components/GroupsScreen';
 import GroupChat from '@/components/GroupChat';
 import MarketplaceScreen from '@/components/MarketplaceScreen';
+import OrdersScreen from '@/components/OrdersScreen';
 import CallOverlay from '@/components/CallOverlay';
 import AdminPanel from '@/components/AdminPanel';
+import AdBanner from '@/components/AdBanner';
+import { trackScreen } from '@/lib/analytics';
 
 interface MobileAppProps {
   screen: Screen;
@@ -75,10 +78,17 @@ export default function MobileApp({
   // Global Chat Wallpaper setting
   const [activeWallpaper, setActiveWallpaper] = useState<string>('default');
   const [activeGroup, setActiveGroup] = useState<Group | null>(null);
+  // Orders is a full-screen overlay reachable from the Marketplace and the Status ads viewer.
+  const [showOrders, setShowOrders] = useState(false);
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [lockEnabled, setLockEnabled] = useState(false);
   const [lockReady, setLockReady] = useState(false);
   const [lockError, setLockError] = useState('');
+
+  // Report top-level tab changes to analytics.
+  useEffect(() => {
+    trackScreen(screen);
+  }, [screen]);
 
   useEffect(() => {
     if (!isNative()) {
@@ -228,11 +238,11 @@ export default function MobileApp({
           {/* Sidebar Content */}
           <div className="flex-1 overflow-y-auto">
             {screen === 'chats' && <ChatList onOpenChat={setActiveChat} />}
-            {screen === 'status' && <StatusScreen />}
+            {screen === 'status' && <StatusScreen onOpenOrders={() => setShowOrders(true)} />}
             {screen === 'calls' && <CallsScreen onStartCall={(peer, type) => void startCall(peer, type)} />}
             {screen === 'channels' && <ChannelsScreen onOpenGroup={setActiveGroup} />}
             {screen === 'groups' && <GroupsScreen onOpenGroup={setActiveGroup} />}
-            {screen === 'market' && <MarketplaceScreen onOpenChat={setActiveChat} />}
+            {screen === 'market' && <MarketplaceScreen onOpenChat={setActiveChat} onOpenOrders={() => setShowOrders(true)} />}
             {screen === 'settings' && (
               <SettingsScreen
                 activeWallpaper={activeWallpaper}
@@ -273,6 +283,9 @@ export default function MobileApp({
             </div>
           )}
         </div>
+
+        {/* Orders — full-screen overlay on top of both columns */}
+        {showOrders && <OrdersScreen onClose={() => setShowOrders(false)} />}
       </div>
     );
   }
@@ -296,11 +309,11 @@ export default function MobileApp({
         ) : (
           <div className="flex-1 overflow-y-auto">
             {screen === 'chats' && <ChatList onOpenChat={setActiveChat} />}
-            {screen === 'status' && <StatusScreen />}
+            {screen === 'status' && <StatusScreen onOpenOrders={() => setShowOrders(true)} />}
             {screen === 'calls' && <CallsScreen onStartCall={(peer, type) => void startCall(peer, type)} />}
             {screen === 'channels' && <ChannelsScreen onOpenGroup={setActiveGroup} />}
             {screen === 'groups' && <GroupsScreen onOpenGroup={setActiveGroup} />}
-            {screen === 'market' && <MarketplaceScreen onOpenChat={setActiveChat} />}
+            {screen === 'market' && <MarketplaceScreen onOpenChat={setActiveChat} onOpenOrders={() => setShowOrders(true)} />}
             {screen === 'settings' && (
               <SettingsScreen
                 activeWallpaper={activeWallpaper}
@@ -313,6 +326,9 @@ export default function MobileApp({
           </div>
         )}
       </div>
+
+      {/* AdMob banner (Android only; renders nothing elsewhere) — reserved above the tab dock */}
+      {!activeChat && !activeGroup && call.phase === 'idle' && <AdBanner />}
 
       {/* Bottom Navigation Dock (Hidden when inside an active conversation or call) */}
       {!activeChat && !activeGroup && call.phase === 'idle' && (
@@ -335,6 +351,9 @@ export default function MobileApp({
           })}
         </div>
       )}
+
+      {/* Orders — full-screen overlay on top of the tab dock */}
+      {showOrders && <OrdersScreen onClose={() => setShowOrders(false)} />}
     </div>
   );
 }

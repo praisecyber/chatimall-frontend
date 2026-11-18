@@ -239,8 +239,34 @@ export interface Listing {
   title: string;
   description: string;
   price: string;
+  /** Machine-readable price in minor units (e.g. cents). Null when the seller hasn't set one. */
+  priceCents: number | null;
+  /** ISO-4217 code the listing is priced in (e.g. "USD"); always present, defaults server-side. */
+  currency: string;
   photoUrl: string | null;
   createdAt: string;
+}
+
+export type OrderStatus = 'pending' | 'paid' | 'released' | 'canceled' | 'failed';
+
+export interface Order {
+  id: string;
+  listingId: string;
+  listingTitle: string | null;
+  buyerId: string;
+  sellerId: string;
+  amountCents: number;
+  currency: string;
+  status: OrderStatus;
+  /** Server-generated gateway reference; also the analytics transaction id. */
+  reference: string;
+  checkoutUrl: string | null;
+  note: string;
+  createdAt: string;
+  paidAt: string | null;
+  releasedAt: string | null;
+  /** Escrow settlement bookkeeping — `status` is 'none' until the buyer confirms receipt. */
+  payout: { status: string; note: string | null };
 }
 
 export interface AdminOverviewStats {

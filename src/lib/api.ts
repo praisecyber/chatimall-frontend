@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { Capacitor } from '@capacitor/core';
 import { api, ApiError, assetUrl, storedUrl } from '@/lib/http';
 import { formatChatTime, formatDuration, initialsAvatar } from '@/lib/format';
 import type {
@@ -12,10 +13,12 @@ import type {
   AdminUserActivity,
   AdminUserItem,
   Call,
+  Chat,
   Channel,
   ChannelPost,
-  Chat,
   DbMessage,
+  Order,
+  OrderStatus,
   SettingsContact,
   StarredMessageItem,
   StatusGroup,
@@ -582,6 +585,8 @@ interface ListingDb {
   title: string;
   description: string;
   price: string;
+  price_cents: number | null;
+  currency: string;
   photo_url: string | null;
   created_at: string;
 }
@@ -592,6 +597,8 @@ const mapListing = (l: ListingDb): Listing => ({
   title: l.title,
   description: l.description,
   price: l.price,
+  priceCents: l.price_cents,
+  currency: l.currency,
   photoUrl: assetUrl(l.photo_url),
   createdAt: l.created_at,
 });
@@ -604,12 +611,23 @@ export async function fetchRoomListings(roomId: string): Promise<Listing[]> {
   return (await api<ListingDb[]>(`/api/listings/room/${roomId}`)).map(mapListing);
 }
 
-export async function createListing(roomId: string, opts: { title: string; description: string; price: string; file?: File }): Promise<Listing> {
+export async function createListing(
+  roomId: string,
+  opts: { title: string; description: string; price: string; priceCents?: number; currency?: string; file?: File }
+): Promise<Listing> {
   let photoUrl: string | null = null;
   if (opts.file) photoUrl = (await uploadFile(opts.file, opts.file.name)).url;
   return mapListing(
     await api<ListingDb>(`/api/listings/room/${roomId}`, {
-      body: { title: opts.title, description: opts.description, price: opts.price, photo_url: photoUrl },
+      body: {
+        title: opts.title,
+        description: opts.description,
+        price: opts.price,
+        photo_url: photoUrl,
+        // Only include the machine-readable price when the caller parsed a usable one — sending
+        // an empty/NaN value would make the listing unbuyable and the server reject it.
+        ...(opts.priceCents ? { price_cents: opts.priceCents, currency: opts.currency ?? 'USD' } : {}),
+      },
     })
   );
 }
@@ -621,6 +639,85 @@ export async function deleteListing(listingId: string): Promise<void> {
 export async function requestToBuy(listingId: string): Promise<{ conversationId: string; starterMessage: string }> {
   const res = await api<{ conversation_id: string; starter_message: string }>(`/api/listings/${listingId}/request`, { body: {} });
   return { conversationId: res.conversation_id, starterMessage: res.starter_message };
+}
+
+/* ===================== ORDERS (escrow checkout) ===================== */
+interface OrderDb {
+  id: string;
+  listing_id: string;
+  listing_title: string | null;
+  buyer_id: string;
+  seller_id: string;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  reference: string;
+  checkout_url: string | null;
+  note: string;
+  created_at: string;
+  paid_at: string | null;
+  released_at: string | null;
+  payout: { status: string; note: string | null };
+}
+
+const mapOrder = (o: OrderDb): Order => ({
+  id: o.id,
+  listingId: o.listing_id,
+  listingTitle: o.listing_title,
+  buyerId: o.buyer_id,
+  sellerId: o.seller_id,
+  amountCents: o.amount_cents,
+  currency: o.currency,
+  // The server owns the closed status set; the union mirror keeps the UI honest about it.
+  status: o.status as OrderStatus,
+  reference: o.reference,
+  checkoutUrl: o.checkout_url,
+  note: o.note ?? '',
+  createdAt: o.created_at,
+  paidAt: o.paid_at,
+  releasedAt: o.released_at,
+  payout: o.payout ?? { status: 'none', note: null },
+});
+
+/**
+ * Order failures arrive as `{ error: CODE, message }` (PRICE_NOT_SET, SELF_ORDER, ORDER_PENDING,
+ * PAYMENTS_UNAVAILABLE, GATEWAY, BAD_STATE, NOT_FOUND). `api()` already turns those into an
+ * {@link ApiError} carrying both the server `message` and the `code`, so callers can show the
+ * message straight away and branch on `err.code` when a code needs special handling (e.g. ORDER_PENDING).
+ */
+export async function createOrder(listingId: string, note?: string): Promise<Order> {
+  return mapOrder(await api<OrderDb>('/api/orders', { body: { listing_id: listingId, note } }));
+}
+
+export async function fetchMyOrders(): Promise<Order[]> {
+  return (await api<OrderDb[]>('/api/orders/mine')).map(mapOrder);
+}
+
+export async function fetchOrder(id: string): Promise<Order> {
+  return mapOrder(await api<OrderDb>(`/api/orders/${id}`));
+}
+
+export async function syncOrder(id: string): Promise<Order> {
+  return mapOrder(await api<OrderDb>(`/api/orders/${id}/sync`, { method: 'POST', body: {} }));
+}
+
+export async function confirmOrder(id: string): Promise<Order> {
+  return mapOrder(await api<OrderDb>(`/api/orders/${id}/confirm`, { method: 'POST', body: {} }));
+}
+
+export async function cancelOrder(id: string): Promise<Order> {
+  return mapOrder(await api<OrderDb>(`/api/orders/${id}/cancel`, { method: 'POST', body: {} }));
+}
+
+/**
+ * OPay's checkout is an external page. On Capacitor (Android) open it in the system browser so the
+ * app's WebView is never navigated away from the running app; on the web (and Electron) do a plain
+ * redirect so OPay's returnUrl brings the buyer back to us with the reference query parameter.
+ */
+export function openCheckout(url: string): void {
+  if (typeof window === 'undefined') return;
+  if (Capacitor.isNativePlatform()) window.open(url, '_system');
+  else window.location.assign(url);
 }
 
 /* ===================== ADMIN CONSOLE ===================== */

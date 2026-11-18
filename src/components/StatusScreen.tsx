@@ -1,22 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, Plus, X, Send, Trash2, Eye, Loader2, Image as ImageIcon, EyeOff, Users, Radio } from 'lucide-react';
-import type { Group, Channel } from '@/types';
+import { Camera, Plus, X, Send, Trash2, Eye, Loader2, Image as ImageIcon, EyeOff, Users, Radio, ShoppingBag } from 'lucide-react';
+import type { Group, Channel, Listing } from '@/types';
 import {
+  ApiError,
+  createOrder,
   deleteStatus,
+  deleteListing,
   fetchStatusFeed,
   fetchGroupStatusFeed,
   fetchChannelStatusFeed,
   fetchGroups,
   fetchChannels,
+  fetchMarketplace,
   markStatusViewed,
+  openCheckout,
   postStatus,
   postGroupStatus,
   postChannelStatus,
   sendText,
   startDirectChat,
+  requestToBuy,
 } from '@/lib/api';
 import { formatChatTime, initialsAvatar } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
+import { trackAdImpression, trackBeginCheckout, trackOrderCreated, trackScreen } from '@/lib/analytics';
 
 const BG: Record<string, string> = {
   emerald: 'from-emerald-700 to-teal-900',
@@ -41,28 +48,31 @@ interface StatusItem {
 }
 interface Entry {
   id: string;
-  kind: 'user' | 'group' | 'channel';
+  kind: 'user' | 'group' | 'channel' | 'ad';
   name: string;
   avatar: string;
   phone: string | null; // only set for kind === 'user' — needed to reply via a direct chat
   isMine: boolean; // "this is my own personal Status row" — only true for kind === 'user'
   items: StatusItem[];
   allViewed: boolean;
+  listing?: Listing; // only set for kind === 'ad'
 }
 
 const isWeekend = () => [0, 6].includes(new Date().getDay());
 
-export default function StatusScreen() {
+export default function StatusScreen({ onOpenOrders }: { onOpenOrders?: () => void }) {
   const { userId, profile } = useAuth();
-  const [category, setCategory] = useState<'status' | 'groups' | 'channels'>('status');
+  const [category, setCategory] = useState<'status' | 'groups' | 'channels' | 'ads'>('status');
   const [personal, setPersonal] = useState<Entry[]>([]);
   const [groupFeed, setGroupFeed] = useState<Entry[]>([]);
   const [channelFeed, setChannelFeed] = useState<Entry[]>([]);
+  const [adFeed, setAdFeed] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<{ entry: Entry; index: number } | null>(null);
   const [progress, setProgress] = useState(0);
   const [reply, setReply] = useState('');
   const [toast, setToast] = useState<string | null>(null);
+  const [buying, setBuying] = useState(false);
 
   const [showAdd, setShowAdd] = useState<false | 'status' | 'groups' | 'channels'>(false);
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
@@ -83,10 +93,12 @@ export default function StatusScreen() {
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      const [feed, groups, channels] = await Promise.all([
+      const [feed, groups, channels, ads] = await Promise.all([
         fetchStatusFeed(userId),
         fetchGroupStatusFeed(),
         fetchChannelStatusFeed(),
+        // an ads hiccup must never take the status feeds down with it
+        fetchMarketplace().catch(() => [] as Listing[]),
       ]);
       setPersonal(
         feed.map((g) => ({
@@ -106,6 +118,31 @@ export default function StatusScreen() {
       setChannelFeed(
         channels.map((c) => ({ id: c.channelId, kind: 'channel', name: c.name, avatar: c.avatar, phone: null, isMine: false, items: c.items, allViewed: c.allViewed }))
       );
+      setAdFeed(
+        ads.map((l) => ({
+          id: l.id,
+          kind: 'ad',
+          name: l.title,
+          avatar: l.photoUrl || initialsAvatar(l.title, l.id),
+          phone: null,
+          isMine: l.sellerId === userId,
+          allViewed: false,
+          listing: l,
+          items: [
+            {
+              id: `ad-${l.id}`,
+              type: l.photoUrl ? 'image' : 'text',
+              body: `${l.title}${l.price ? ` · ${l.price}` : ''}\n\n${l.description}`,
+              mediaUrl: l.photoUrl,
+              bg: 'indigo',
+              createdAt: l.createdAt,
+              viewed: false,
+              anonymous: false,
+              postedBy: l.sellerId,
+            },
+          ],
+        }))
+      );
     } catch (err) {
       console.error('Could not load statuses', err);
     }
@@ -119,11 +156,26 @@ export default function StatusScreen() {
   }, [load]);
 
   const mine = personal.find((g) => g.isMine);
-  const feedFor = category === 'status' ? personal.filter((g) => !g.isMine) : category === 'groups' ? groupFeed : channelFeed;
+  const feedFor =
+    category === 'status'
+      ? personal.filter((g) => !g.isMine)
+      : category === 'groups'
+      ? groupFeed
+      : category === 'channels'
+      ? channelFeed
+      : adFeed;
   const recent = feedFor.filter((g) => !g.allViewed);
   const seen = feedFor.filter((g) => g.allViewed);
+  // ads have no composer of their own — they're listed from the Marketplace, so fall back to 'status'
+  const composerCategory = category === 'ads' ? 'status' : category;
 
   const open = (entry: Entry) => {
+    if (entry.kind === 'ad') {
+      // Ad entries are shown in this viewer (no ad units are placed inside it).
+      trackAdImpression({ format: 'native', adUnit: entry.listing?.id, placement: 'status_ads' });
+    } else {
+      trackScreen('status_viewer');
+    }
     const first = entry.items.findIndex((i) => !i.viewed);
     setActive({ entry, index: first >= 0 && !entry.isMine ? first : 0 });
   };
@@ -135,8 +187,21 @@ export default function StatusScreen() {
   }, [load]);
 
   const current = active ? active.entry.items[active.index] : null;
+  // An ad can be paid in-app only when the seller set a numeric price and it isn't your own listing.
+  const activeListing = active?.entry.kind === 'ad' ? active.entry.listing : undefined;
+  const canBuyActive =
+    !!activeListing &&
+    activeListing.sellerId !== userId &&
+    typeof activeListing.priceCents === 'number' &&
+    activeListing.priceCents > 0;
+
   useEffect(() => {
     if (!active || !current) return;
+    // an ad is not a story: hold it open so the viewer can read it and tap "Message Seller"
+    if (active.entry.kind === 'ad') {
+      setProgress(100);
+      return;
+    }
     setProgress(0);
     if (current.postedBy !== userId) void markStatusViewed(current.id);
     const started = Date.now();
@@ -187,13 +252,60 @@ export default function StatusScreen() {
     setPosting(false);
   };
 
-  const remove = async (id: string) => {
+  const remove = async (entry: Entry, itemId: string) => {
     try {
-      await deleteStatus(id);
+      if (entry.kind === 'ad' && entry.listing) {
+        await deleteListing(entry.listing.id);
+        setAdFeed((prev) => prev.filter((a) => a.id !== entry.id));
+      } else {
+        await deleteStatus(itemId);
+      }
       close();
     } catch {
       flash('Could not delete');
     }
+  };
+
+  const messageSeller = async (listing: Listing | undefined) => {
+    if (!listing) return;
+    try {
+      const { conversationId, starterMessage } = await requestToBuy(listing.id);
+      await sendText(conversationId, starterMessage);
+      flash('Interest sent to the seller — check your chats.');
+      close();
+    } catch (err) {
+      flash(err instanceof Error ? err.message : 'Could not reach the seller.');
+    }
+  };
+
+  // Escrow checkout from the ad viewer: same flow as the Marketplace "Buy now" — create the order
+  // server-side, hand the buyer to OPay, and land them on Orders so live status is waiting on return.
+  const buy = async (listing: Listing | undefined) => {
+    if (!listing || !(typeof listing.priceCents === 'number' && listing.priceCents > 0)) return;
+    setBuying(true);
+    trackBeginCheckout({ amountMajor: listing.priceCents / 100, currency: listing.currency });
+    try {
+      const order = await createOrder(listing.id);
+      trackOrderCreated({
+        orderReference: order.reference,
+        amountMajor: order.amountCents / 100,
+        currency: order.currency,
+      });
+      onOpenOrders?.();
+      close();
+      if (order.checkoutUrl) openCheckout(order.checkoutUrl);
+      else flash('Order created — open Orders to finish paying.');
+    } catch (err) {
+      // A pending order already exists for this listing: send the buyer to it instead of erroring.
+      if (err instanceof ApiError && err.code === 'ORDER_PENDING') {
+        flash('You already have a pending order for this item.');
+        onOpenOrders?.();
+        close();
+      } else {
+        flash(err instanceof Error ? err.message : 'Could not start checkout.');
+      }
+    }
+    setBuying(false);
   };
 
   const sendReply = async () => {
@@ -232,17 +344,20 @@ export default function StatusScreen() {
       <div className="bg-paper px-4 pt-12 pb-3 flex-shrink-0 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-[26px] font-extrabold text-ink tracking-tight">Status</h1>
-          <button
-            onClick={() => void openComposer(category)}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-brand-50 hover:bg-brand-100 active:scale-95 text-brand-700 transition-all"
-            title="Add"
-          >
-            <Camera className="w-5 h-5" />
-          </button>
+          {category !== 'ads' && (
+            <button
+              onClick={() => void openComposer(composerCategory)}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-brand-50 hover:bg-brand-100 active:scale-95 text-brand-700 transition-all"
+              title="Add"
+            >
+              <Camera className="w-5 h-5" />
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1 bg-paper-mist p-1 rounded-2xl">
           <TabButton id="groups" label="Groups" icon={Users} />
           <TabButton id="channels" label="Channels" icon={Radio} />
+          <TabButton id="ads" label="Ads" icon={ShoppingBag} />
           <TabButton id="status" label="Status" icon={Camera} />
         </div>
       </div>
@@ -280,6 +395,7 @@ export default function StatusScreen() {
             {category === 'status' && 'Statuses from people you chat with appear here and disappear after 24 hours.'}
             {category === 'groups' && 'Statuses posted to your groups appear here.'}
             {category === 'channels' && 'Statuses posted to channels you follow appear here.'}
+            {category === 'ads' && 'Marketplace listings from your groups and channels appear here.'}
           </p>
         )}
 
@@ -301,13 +417,15 @@ export default function StatusScreen() {
         )}
       </div>
 
-      <button
-        onClick={() => void openComposer(category)}
-        className="absolute bottom-20 right-4 w-14 h-14 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lift hover:scale-105 active:scale-95 transition-transform"
-        title="New status"
-      >
-        <Plus className="w-6 h-6 text-white" />
-      </button>
+      {category !== 'ads' && (
+        <button
+          onClick={() => void openComposer(composerCategory)}
+          className="absolute bottom-20 right-4 w-14 h-14 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lift hover:scale-105 active:scale-95 transition-transform"
+          title="New status"
+        >
+          <Plus className="w-6 h-6 text-white" />
+        </button>
+      )}
 
       {/* story viewer */}
       {active && current && (
@@ -356,10 +474,38 @@ export default function StatusScreen() {
             {current.postedBy === userId ? (
               <div className="flex items-center justify-between text-xs text-gray-300">
                 <span className="flex items-center gap-1.5">
-                  <Eye className="w-4 h-4" /> Seen by {current.viewCount ?? 0}
+                  {active.entry.kind === 'ad' ? (
+                    <>
+                      <ShoppingBag className="w-4 h-4" /> Your ad
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" /> Seen by {current.viewCount ?? 0}
+                    </>
+                  )}
                 </span>
-                <button onClick={() => void remove(current.id)} className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300">
+                <button onClick={() => void remove(active.entry, current.id)} className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300">
                   <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              </div>
+            ) : active.entry.kind === 'ad' && active.entry.listing ? (
+              <div className="flex flex-col items-center gap-2.5">
+                {canBuyActive && (
+                  <button
+                    onClick={() => void buy(active.entry.listing)}
+                    disabled={buying}
+                    className="px-7 py-3 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-60"
+                  >
+                    {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />} Buy now
+                  </button>
+                )}
+                <button
+                  onClick={() => void messageSeller(active.entry.listing)}
+                  className={`px-6 py-3 rounded-full font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 ${
+                    canBuyActive ? 'bg-white/15 text-white border border-white/25' : 'bg-brand-500 text-white'
+                  }`}
+                >
+                  <ShoppingBag className="w-4 h-4" /> Message Seller
                 </button>
               </div>
             ) : active.entry.kind === 'user' ? (
