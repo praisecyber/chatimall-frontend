@@ -44,10 +44,6 @@ function DownloadPage({
             </div>
 
             <div className="pc-nav-right">
-              <button type="button" onClick={onOpenWebApp} className="pc-button pc-nav-cta">
-                Open Web App
-                <ArrowUpRight className="w-4 h-4" />
-              </button>
               <button
                 type="button"
                 className="pc-menu-button"
@@ -77,17 +73,6 @@ function DownloadPage({
               <a href="#windows-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Windows</a>
               <a href="#android-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Android</a>
               <a href="#web-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Web</a>
-              <button
-                type="button"
-                className="pc-button pc-nav-cta"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenWebApp();
-                }}
-              >
-                Open Web App
-                <ArrowUpRight className="w-4 h-4" />
-              </button>
             </div>
           </div>
         )}
