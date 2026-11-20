@@ -2364,32 +2364,6 @@ body {
   color: #fff;
 }
 
-.pc-download-hero-art {
-  position: relative;
-  flex: 0 0 440px;
-  max-width: 440px;
-}
-
-.pc-download-hero-image {
-  display: block;
-  border-radius: 24px;
-  box-shadow: 0 26px 60px rgba(15, 31, 23, 0.35);
-}
-
-.pc-download-hero-laptop {
-  width: 100%;
-  height: auto;
-}
-
-.pc-download-hero-phone {
-  position: absolute;
-  right: -40px;
-  bottom: -36px;
-  width: 42%;
-  height: auto;
-  border-radius: 20px;
-}
-
 .pc-download-options {
   padding: 58px 0 62px;
 }
@@ -2592,10 +2566,6 @@ body {
     min-height: 0;
     padding-top: 52px;
     padding-bottom: 40px;
-  }
-
-  .pc-download-hero-art {
-    display: none;
   }
 
   .pc-download-hero h1 {
