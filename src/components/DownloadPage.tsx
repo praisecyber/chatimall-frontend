@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { APP_NAME } from '@/brand';
 import {
   ArrowLeft,
@@ -6,9 +7,11 @@ import {
   Download,
   Globe2,
   Laptop,
+  Menu,
   PanelsTopLeft,
   ShieldCheck,
   Smartphone,
+  X,
 } from 'lucide-react';
 
 const WINDOWS_DOWNLOAD_URL =
@@ -23,24 +26,76 @@ function DownloadPage({
   onOpenWebApp: () => void;
   onBack: () => void;
 }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <main className="pc-download-page">
-      <header className="pc-download-header">
-        <div className="pc-download-container pc-download-header-inner">
-          <button type="button" className="pc-download-brand" onClick={onBack} aria-label={`${APP_NAME} home`}>
-            <img src="/header/header-dark.svg" alt={APP_NAME} />
-          </button>
-          <nav className="pc-download-nav" aria-label="Download navigation">
-            <button type="button" className="pc-download-nav-link" onClick={onBack}>
-              <ArrowLeft size={16} />
-              Home
+      <header className="pc-header pc-download-header">
+        <div className="pc-container">
+          <nav className="pc-nav" aria-label="Download navigation">
+            <button type="button" className="pc-wordmark pc-download-brand" onClick={onBack} aria-label={`${APP_NAME} home`}>
+              <img src="/header/header-dark.svg" alt={APP_NAME} className="pc-wordmark-logo" />
             </button>
-            <button type="button" className="pc-download-web-link" onClick={onOpenWebApp}>
-              Open web app
-              <ArrowUpRight size={15} />
-            </button>
+
+            <div className="pc-nav-links">
+              <a href="#windows-download" className="pc-nav-link">Windows</a>
+              <a href="#android-download" className="pc-nav-link">Android</a>
+              <a href="#web-download" className="pc-nav-link">Web</a>
+            </div>
+
+            <div className="pc-nav-right">
+              <button type="button" onClick={onBack} className="pc-button pc-button-secondary pc-download-home-button">
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Home
+              </button>
+              <button type="button" onClick={onOpenWebApp} className="pc-button pc-nav-cta">
+                Open Web App
+                <ArrowUpRight className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                className="pc-menu-button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle navigation menu"
+                aria-expanded={mobileMenuOpen}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </nav>
         </div>
+
+        {mobileMenuOpen && (
+          <div className="pc-container pc-download-mobile-menu-wrap">
+            <div className="pc-mobile-menu">
+              <a href="#windows-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Windows</a>
+              <a href="#android-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Android</a>
+              <a href="#web-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Web</a>
+              <button
+                type="button"
+                className="pc-button pc-button-secondary pc-download-mobile-action"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onBack();
+                }}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Home
+              </button>
+              <button
+                type="button"
+                className="pc-button pc-nav-cta"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenWebApp();
+                }}
+              >
+                Open Web App
+                <ArrowUpRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       <section className="pc-download-hero">
@@ -77,7 +132,7 @@ function DownloadPage({
           </div>
 
           <div className="pc-download-grid">
-            <article className="pc-download-card pc-download-card-featured">
+            <article id="windows-download" className="pc-download-card pc-download-card-featured">
               <div className="pc-download-card-top">
                 <div className="pc-download-icon pc-download-icon-featured"><PanelsTopLeft size={25} /></div>
                 <span className="pc-download-recommended">RECOMMENDED</span>
@@ -98,7 +153,7 @@ function DownloadPage({
               <p className="pc-download-version">Latest release · Windows x64</p>
             </article>
 
-            <article className="pc-download-card">
+            <article id="android-download" className="pc-download-card">
               <div className="pc-download-icon"><Smartphone size={24} /></div>
               <h3>Chatimall for Android</h3>
               <p className="pc-download-card-copy">Install the Android app directly from the APK.</p>
@@ -116,7 +171,7 @@ function DownloadPage({
               <p className="pc-download-version">Android app package</p>
             </article>
 
-            <article className="pc-download-card pc-download-card-web">
+            <article id="web-download" className="pc-download-card pc-download-card-web">
               <div className="pc-download-icon"><Globe2 size={24} /></div>
               <h3>Chatimall on the web</h3>
               <p className="pc-download-card-copy">No install needed. Open Chatimall in your browser.</p>

@@ -2127,25 +2127,20 @@ body {
 }
 
 .pc-download-header {
-  background: #fff;
-  border-bottom: 1px solid #e8ede9;
+  position: sticky;
+  top: 0;
+  background: #000;
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
 }
 
-.pc-download-header-inner,
-.pc-download-nav,
 .pc-download-footer .pc-download-container {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.pc-download-header-inner {
-  min-height: 76px;
-}
-
 .pc-download-brand,
-.pc-download-nav-link,
-.pc-download-web-link,
 .pc-download-footer button {
   border: 0;
   background: none;
@@ -2159,28 +2154,63 @@ body {
 
 .pc-download-brand img {
   display: block;
-  width: 148px;
+  width: 150px;
 }
 
-.pc-download-nav {
-  gap: 30px;
+.pc-download-header .pc-nav-cta {
+  background: #0f8a5f;
+  color: #fff;
 }
 
-.pc-download-nav-link,
-.pc-download-web-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.88rem;
+.pc-download-header .pc-nav-cta:hover {
+  background: #0b704c;
+  box-shadow: 0 14px 28px rgba(15, 138, 95, 0.18);
+}
+
+.pc-download-mobile-menu-wrap {
+  position: relative;
+}
+
+.pc-download-page .pc-mobile-menu {
+  background: #fff;
+  border: 1px solid rgba(15, 31, 23, 0.12);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.pc-download-page .pc-mobile-menu .pc-nav-link {
+  color: #111;
   font-weight: 600;
+  font-size: 0.95rem;
+  padding: 12px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  display: block;
 }
 
-.pc-download-nav-link {
-  color: #49564f;
+.pc-download-page .pc-mobile-menu .pc-nav-link:hover {
+  background: #f4faf6;
+  color: #0f8a5f;
 }
 
-.pc-download-web-link {
-  color: #0b7652;
+.pc-download-mobile-action {
+  justify-content: center;
+}
+
+.pc-download-page .pc-mobile-menu .pc-download-mobile-action {
+  background: #fff;
+  border: 1px solid rgba(15, 31, 23, 0.14);
+  color: #0f1f17;
+}
+
+.pc-download-page .pc-mobile-menu .pc-download-mobile-action:hover {
+  background: #f4faf6;
+  border-color: rgba(15, 138, 95, 0.35);
+}
+
+.pc-download-card[id] {
+  scroll-margin-top: 100px;
 }
 
 .pc-download-hero {
@@ -2496,29 +2526,12 @@ body {
     width: min(100% - 32px, 460px);
   }
 
-  .pc-download-header-inner {
-    min-height: 66px;
+  .pc-download-header .pc-nav {
+    height: 66px;
   }
 
   .pc-download-brand img {
     width: 126px;
-  }
-
-  .pc-download-nav {
-    gap: 16px;
-  }
-
-  .pc-download-nav-link {
-    font-size: 0;
-  }
-
-  .pc-download-nav-link svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .pc-download-web-link {
-    font-size: 0.78rem;
   }
 
   .pc-download-hero-inner {
