@@ -2286,6 +2286,11 @@ body {
 
 .pc-download-hero-copy {
   max-width: 610px;
+  padding: 34px 38px;
+  border-radius: 28px;
+  background: #0f8a5f;
+  color: #fff;
+  box-shadow: 0 26px 60px rgba(15, 138, 95, 0.22);
 }
 
 .pc-download-back {
@@ -2320,19 +2325,11 @@ body {
 }
 
 .pc-download-hero .pc-download-eyebrow {
-  width: fit-content;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #0f8a5f;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .pc-download-hero h1 {
-  width: fit-content;
   margin: 0;
-  padding: 8px 18px;
-  border-radius: 20px;
-  background: #0f8a5f;
   color: #fff;
   font-size: clamp(2.5rem, 5vw, 4rem);
   font-weight: 700;
@@ -2345,13 +2342,9 @@ body {
 }
 
 .pc-download-lede {
-  width: fit-content;
   max-width: 490px;
   margin: 20px 0 0;
-  padding: 10px 16px;
-  border-radius: 18px;
-  background: #0f8a5f;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.92);
   font-size: 1rem;
   line-height: 1.7;
 }
@@ -2369,7 +2362,7 @@ body {
   gap: 7px;
   padding: 6px 14px;
   border-radius: 999px;
-  background: #0f8a5f;
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
   font-size: 0.82rem;
 }
@@ -2597,6 +2590,11 @@ body {
 
   .pc-download-hero-art {
     display: none;
+  }
+
+  .pc-download-hero-copy {
+    padding: 26px 22px;
+    border-radius: 22px;
   }
 
   .pc-download-hero h1 {
