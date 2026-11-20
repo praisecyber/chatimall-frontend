@@ -30,7 +30,7 @@
     "@capgo/capacitor-native-biometric": "^8.7.0",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
-    "firebase": "^13.1.0",
+    "firebase": "^12.6.0",
     "lucide-react": "^0.446.0",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",

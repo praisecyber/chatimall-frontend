@@ -74,7 +74,6 @@ Return ONLY valid JSON in this exact structure without markdown backticks:
     const response = await geminiFlashModel.generateContent([
       prompt,
       {
-        type: 'inlineData',
         inlineData: {
           data: base64Data,
           mimeType,
