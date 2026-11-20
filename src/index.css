@@ -2360,60 +2360,16 @@ body {
 }
 
 .pc-download-hero-art {
-  position: relative;
-  flex: 0 0 300px;
-  height: 245px;
+  flex: 0 0 400px;
+  max-width: 400px;
 }
 
-.pc-download-device {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  color: #0f8a5f;
-  border: 1px solid rgba(15, 138, 95, 0.2);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(238, 244, 240, 0.96));
-  box-shadow: 0 20px 55px rgba(15, 31, 23, 0.12);
-}
-
-.pc-download-device-back {
-  z-index: 1;
-  top: 46px;
-  left: 18px;
-  width: 102px;
-  height: 156px;
-  border-radius: 22px;
-  transform: rotate(-12deg);
-}
-
-.pc-download-device-front {
-  z-index: 2;
-  top: 72px;
-  left: 89px;
-  width: 205px;
-  height: 139px;
-  border-radius: 15px;
-  transform: rotate(5deg);
-}
-
-.pc-download-art-dot {
-  position: absolute;
-  border-radius: 50%;
-  background: #0f8a5f;
-  box-shadow: 0 0 30px rgba(15, 138, 95, 0.32);
-}
-
-.pc-download-art-dot-one {
-  top: 22px;
-  right: 52px;
-  width: 10px;
-  height: 10px;
-}
-
-.pc-download-art-dot-two {
-  bottom: 30px;
-  left: 104px;
-  width: 6px;
-  height: 6px;
+.pc-download-hero-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 24px;
+  box-shadow: 0 26px 60px rgba(15, 31, 23, 0.16);
 }
 
 .pc-download-options {

@@ -6,7 +6,6 @@ import {
   Check,
   Download,
   Globe2,
-  Laptop,
   Menu,
   PanelsTopLeft,
   ShieldCheck,
@@ -97,11 +96,12 @@ function DownloadPage({
               <span><ShieldCheck size={15} /> Secure connection</span>
             </div>
           </div>
-          <div className="pc-download-hero-art" aria-hidden="true">
-            <div className="pc-download-device pc-download-device-back"><Smartphone size={40} /></div>
-            <div className="pc-download-device pc-download-device-front"><Laptop size={62} /></div>
-            <span className="pc-download-art-dot pc-download-art-dot-one" />
-            <span className="pc-download-art-dot pc-download-art-dot-two" />
+          <div className="pc-download-hero-art">
+            <img
+              className="pc-download-hero-image"
+              src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20product%20photo%20of%20a%20modern%20silver%20laptop%20and%20a%20smartphone%20displayed%20side%20by%20side%2C%20laptop%20screen%20showing%20a%20clean%20chat%20app%20interface%2C%20phone%20screen%20showing%20a%20voice%20message%20screen%2C%20soft%20white%20and%20mint%20green%20gradient%20background%2C%20studio%20lighting%2C%20minimal%2C%20high%20detail&image_size=landscape_4_3"
+              alt={`${APP_NAME} on a laptop and phone`}
+            />
           </div>
         </div>
       </section>
