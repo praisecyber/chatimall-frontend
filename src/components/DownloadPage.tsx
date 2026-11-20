@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { APP_NAME } from '@/brand';
 import {
+  ArrowLeft,
   ArrowUpRight,
   Check,
   Download,
@@ -81,6 +82,10 @@ function DownloadPage({
       <section className="pc-download-hero">
         <div className="pc-download-container pc-download-hero-inner">
           <div className="pc-download-hero-copy">
+            <button type="button" className="pc-download-back" onClick={onBack}>
+              <ArrowLeft size={16} />
+              Go back
+            </button>
             <p className="pc-download-eyebrow">ONE ROOM. EVERY DEVICE.</p>
             <h1>Get <span className="pc-download-title-accent">{APP_NAME}</span><br />for your device.</h1>
             <p className="pc-download-lede">
