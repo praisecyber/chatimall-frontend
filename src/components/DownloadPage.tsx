@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { APP_NAME } from '@/brand';
 import {
-  ArrowLeft,
   ArrowUpRight,
   Check,
   Download,
@@ -38,16 +37,13 @@ function DownloadPage({
             </button>
 
             <div className="pc-nav-links">
+              <button type="button" className="pc-nav-link" onClick={onBack}>Home</button>
               <a href="#windows-download" className="pc-nav-link">Windows</a>
               <a href="#android-download" className="pc-nav-link">Android</a>
               <a href="#web-download" className="pc-nav-link">Web</a>
             </div>
 
             <div className="pc-nav-right">
-              <button type="button" onClick={onBack} className="pc-button pc-button-secondary pc-download-home-button">
-                <ArrowLeft className="w-3.5 h-3.5" />
-                Home
-              </button>
               <button type="button" onClick={onOpenWebApp} className="pc-button pc-nav-cta">
                 Open Web App
                 <ArrowUpRight className="w-4 h-4" />
@@ -68,20 +64,19 @@ function DownloadPage({
         {mobileMenuOpen && (
           <div className="pc-container pc-download-mobile-menu-wrap">
             <div className="pc-mobile-menu">
-              <a href="#windows-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Windows</a>
-              <a href="#android-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Android</a>
-              <a href="#web-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Web</a>
               <button
                 type="button"
-                className="pc-button pc-button-secondary pc-download-mobile-action"
+                className="pc-nav-link"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onBack();
                 }}
               >
-                <ArrowLeft className="w-4 h-4" />
                 Home
               </button>
+              <a href="#windows-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Windows</a>
+              <a href="#android-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Android</a>
+              <a href="#web-download" className="pc-nav-link" onClick={() => setMobileMenuOpen(false)}>Web</a>
               <button
                 type="button"
                 className="pc-button pc-nav-cta"
@@ -102,7 +97,7 @@ function DownloadPage({
         <div className="pc-download-container pc-download-hero-inner">
           <div className="pc-download-hero-copy">
             <p className="pc-download-eyebrow">ONE ROOM. EVERY DEVICE.</p>
-            <h1>Get Chatimall<br />for your device.</h1>
+            <h1>Get <span className="pc-download-title-accent">{APP_NAME}</span><br />for your device.</h1>
             <p className="pc-download-lede">
               Voice notes, live rooms, and your people—ready wherever you are.
               Pick a download to get started.
@@ -198,10 +193,27 @@ function DownloadPage({
         </div>
       </section>
 
-      <footer className="pc-download-footer">
+      <footer className="pc-footer pc-download-footer">
         <div className="pc-download-container">
-          <span>© 2025 {APP_NAME} · Say it. Grow it.</span>
-          <button type="button" onClick={onBack}>Back to {APP_NAME}</button>
+          <div className="pc-footer-row">
+            <button
+              type="button"
+              className="pc-wordmark pc-download-footer-brand"
+              onClick={onBack}
+              aria-label={`${APP_NAME} home`}
+            >
+              <img src="/footer/footer-dark.svg" alt={APP_NAME} className="pc-wordmark-logo" />
+            </button>
+            <nav className="pc-footer-links" aria-label="Download footer">
+              <a href="#windows-download" className="pc-nav-link">Windows</a>
+              <a href="#android-download" className="pc-nav-link">Android</a>
+              <a href="#web-download" className="pc-nav-link">Web</a>
+              <button type="button" className="pc-nav-link" onClick={onBack}>Home</button>
+            </nav>
+            <p className="pc-footer-copy pc-mono">
+              © 2025 {APP_NAME.toLowerCase()} / made for the in-between
+            </p>
+          </div>
         </div>
       </footer>
     </main>
