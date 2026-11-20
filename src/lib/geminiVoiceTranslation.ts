@@ -1,4 +1,4 @@
-import { geminiFlashModel } from '@/lib/firebase';
+import { getGeminiFlashModel } from '@/lib/firebase';
 import { fetchVoiceTranslation } from '@/lib/api';
 
 export interface VoiceTranslationResult {
@@ -71,7 +71,7 @@ Return ONLY valid JSON in this exact structure without markdown backticks:
 {"sourceLanguage": "code", "transcript": "original words", "translatedText": "translated words"}`;
 
   try {
-    const response = await geminiFlashModel.generateContent([
+    const response = await getGeminiFlashModel().generateContent([
       prompt,
       {
         inlineData: {

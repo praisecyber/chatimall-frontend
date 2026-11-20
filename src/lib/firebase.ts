@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAI, getGenerativeModel } from 'firebase/ai';
-import { getAnalytics, isSupported } from 'firebase/analytics';
 import { Capacitor } from '@capacitor/core';
+import type { GenerativeModel } from 'firebase/ai';
 
 // Automatically detect whether the app is running as a native Android APK or on Web
 const isNativeAndroid = Capacitor.getPlatform() === 'android';
@@ -27,17 +27,15 @@ export const firebaseConfig = {
 // Initialize Firebase App
 export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firebase Analytics if supported in the browser environment
-if (typeof window !== 'undefined' && !isNativeAndroid) {
-  void isSupported().then((yes) => {
-    if (yes) getAnalytics(firebaseApp);
-  });
+let geminiFlashModel: GenerativeModel | null = null;
+
+/** Create the optional AI service only when voice translation is requested. */
+export function getGeminiFlashModel(): GenerativeModel {
+  if (!geminiFlashModel) {
+    const firebaseAI = getAI(firebaseApp);
+    geminiFlashModel = getGenerativeModel(firebaseAI, {
+      model: 'gemini-1.5-flash',
+    });
+  }
+  return geminiFlashModel;
 }
-
-// Initialize Firebase AI Logic service (Gemini 1.5 Flash developer API)
-export const firebaseAI = getAI(firebaseApp);
-
-// Initialize Gemini 1.5 Flash (optimized for multimodal audio voice notes, translation, & summarization)
-export const geminiFlashModel = getGenerativeModel(firebaseAI, {
-  model: 'gemini-1.5-flash',
-});
