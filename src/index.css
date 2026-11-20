@@ -2267,10 +2267,8 @@ body {
 
 .pc-download-hero {
   overflow: hidden;
-  color: #111111;
-  background:
-    radial-gradient(ellipse at 82% 55%, rgba(15, 138, 95, 0.12), transparent 34%),
-    linear-gradient(180deg, #ffffff 0%, #fbfefc 48%, #f4faf6 100%);
+  color: #ffffff;
+  background: #0f8a5f;
   border-bottom: 1px solid rgba(15, 31, 23, 0.06);
 }
 
@@ -2286,11 +2284,6 @@ body {
 
 .pc-download-hero-copy {
   max-width: 610px;
-  padding: 34px 38px;
-  border-radius: 28px;
-  background: #0f8a5f;
-  color: #fff;
-  box-shadow: 0 26px 60px rgba(15, 138, 95, 0.22);
 }
 
 .pc-download-back {
@@ -2590,11 +2583,6 @@ body {
 
   .pc-download-hero-art {
     display: none;
-  }
-
-  .pc-download-hero-copy {
-    padding: 26px 22px;
-    border-radius: 22px;
   }
 
   .pc-download-hero h1 {
