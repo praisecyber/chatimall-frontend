@@ -2364,6 +2364,29 @@ body {
   color: #fff;
 }
 
+.pc-download-hero-art {
+  position: relative;
+  flex: 0 0 440px;
+  max-width: 440px;
+}
+
+.pc-download-hero-image {
+  display: block;
+}
+
+.pc-download-hero-laptop {
+  width: 100%;
+  height: auto;
+}
+
+.pc-download-hero-phone {
+  position: absolute;
+  right: -40px;
+  bottom: -36px;
+  width: 42%;
+  height: auto;
+}
+
 .pc-download-options {
   padding: 58px 0 62px;
 }

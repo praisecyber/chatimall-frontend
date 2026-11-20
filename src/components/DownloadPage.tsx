@@ -96,6 +96,18 @@ function DownloadPage({
               <span><ShieldCheck size={15} /> Secure connection</span>
             </div>
           </div>
+          <div className="pc-download-hero-art">
+            <img
+              className="pc-download-hero-image pc-download-hero-laptop"
+              src="/images/download-laptop.jpg"
+              alt={`${APP_NAME} on a laptop`}
+            />
+            <img
+              className="pc-download-hero-image pc-download-hero-phone"
+              src="/images/download-phone.jpg"
+              alt={`${APP_NAME} on a phone`}
+            />
+          </div>
         </div>
       </section>
 
