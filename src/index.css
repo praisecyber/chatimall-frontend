@@ -2319,9 +2319,21 @@ body {
   letter-spacing: 0.15em;
 }
 
+.pc-download-hero .pc-download-eyebrow {
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #0f8a5f;
+  color: #fff;
+}
+
 .pc-download-hero h1 {
+  width: fit-content;
   margin: 0;
-  color: #0f8a5f;
+  padding: 8px 18px;
+  border-radius: 20px;
+  background: #0f8a5f;
+  color: #fff;
   font-size: clamp(2.5rem, 5vw, 4rem);
   font-weight: 700;
   letter-spacing: -0.065em;
@@ -2329,13 +2341,17 @@ body {
 }
 
 .pc-download-title-accent {
-  color: #0f8a5f;
+  color: #fff;
 }
 
 .pc-download-lede {
+  width: fit-content;
   max-width: 490px;
   margin: 20px 0 0;
-  color: #0f8a5f;
+  padding: 10px 16px;
+  border-radius: 18px;
+  background: #0f8a5f;
+  color: #fff;
   font-size: 1rem;
   line-height: 1.7;
 }
@@ -2343,7 +2359,7 @@ body {
 .pc-download-trust {
   display: flex;
   flex-wrap: wrap;
-  gap: 22px;
+  gap: 14px;
   margin-top: 25px;
 }
 
@@ -2351,12 +2367,15 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #0f8a5f;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #0f8a5f;
+  color: #fff;
   font-size: 0.82rem;
 }
 
 .pc-download-trust svg {
-  color: #0f8a5f;
+  color: #fff;
 }
 
 .pc-download-hero-art {
