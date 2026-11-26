@@ -249,11 +249,11 @@ function LandingPage({
           <div className="pc-marquee-track">
             {[...Array(4)].map((_, i) => (
               <span key={i} className="pc-marquee-group">
-                <span className="pc-marquee-item pc-text-coral">MADE FOR THE IN-BETWEEN</span>
+                <span className="pc-marquee-item pc-text-coral">CLOSER CONNECTIONS</span>
                 <span className="pc-marquee-item pc-text-muted">LESS NOISE</span>
                 <span className="pc-marquee-item pc-text-coral">MORE SIGNAL</span>
                 <span className="pc-marquee-item pc-text-mint">PRIVATE BY DEFAULT</span>
-                <span className="pc-marquee-item pc-text-coral">MADE FOR THE IN-BETWEEN</span>
+                <span className="pc-marquee-item pc-text-coral">CLOSER CONNECTIONS</span>
               </span>
             ))}
           </div>
