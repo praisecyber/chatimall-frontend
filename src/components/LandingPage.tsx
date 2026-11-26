@@ -494,9 +494,10 @@ function LandingPage({
               <div className="pc-footer-links">
                 <a href="#why" className="pc-nav-link">Why {APP_NAME}</a>
                 <a href="#faq" className="pc-nav-link">FAQ</a>
-                <a href="#top" className="pc-nav-link">Say hello</a>
+                <a href="/privacy.html" className="pc-nav-link">Privacy</a>
+                <a href="/terms.html" className="pc-nav-link">Terms</a>
               </div>
-              <p className="pc-footer-copy pc-mono">© 2025 {APP_NAME.toLowerCase()} / made for the in-between</p>
+              <p className="pc-footer-copy pc-mono">© 2026 {APP_NAME.toLowerCase()} / Good conversations. Closer connections.</p>
             </div>
           </div>
         </footer>

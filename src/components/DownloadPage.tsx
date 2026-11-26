@@ -206,7 +206,7 @@ function DownloadPage({
               <button type="button" className="pc-nav-link" onClick={onBack}>Home</button>
             </nav>
             <p className="pc-footer-copy pc-mono">
-              © 2025 {APP_NAME.toLowerCase()} / made for the in-between
+              © 2026 {APP_NAME.toLowerCase()} / Good conversations. Closer connections.
             </p>
           </div>
         </div>
