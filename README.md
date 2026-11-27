@@ -56,18 +56,18 @@ large APK in the Vercel deployment.
 
 The owner-only Admin Console **Release Center** links to the frontend repository's
 `.github/workflows/release.yml`. Push feature changes to `praisecyber/chatimall-frontend`, then run the
-workflow from GitHub Actions. It checks types and changed-file lint, builds the web app and a signed
-Android APK, and then pauses at the protected `production` environment before deploying the website
-to Vercel, uploading compatible web assets to Capgo, and publishing `Chatimall.apk` as a new release
-in `praisecyber/chatimall` (the existing download repository). Render is a separate backend service
-and is not deployed by this frontend workflow.
+workflow from GitHub Actions. It checks types and lint, builds the web app, a signed Android APK, and
+a checksum-verified updater bundle, then pauses at the protected `production` environment before
+deploying the website and update bundle to Vercel and publishing `Chatimall.apk`
+as a new release in `praisecyber/chatimall` (the existing download repository). Render is a separate
+backend service and is not deployed by this frontend workflow.
 
 Before the first run:
 
 1. Add these repository Actions secrets: `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`,
    `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_STORE_PASSWORD`, and
    `ANDROID_KEY_PASSWORD`. `ANDROID_GOOGLE_SERVICES_JSON_BASE64` is optional.
-2. Add these secrets to the GitHub `production` environment: `CAPGO_TOKEN`, `VERCEL_TOKEN`,
+2. Add these secrets to the GitHub `production` environment: `VERCEL_TOKEN`,
    `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, and `CHATIMALL_RELEASE_TOKEN`. The last secret must be a
    fine-grained token with Contents read/write access only to `praisecyber/chatimall`, so the frontend
    workflow can publish the APK to the repository used by the download page.
@@ -75,8 +75,9 @@ Before the first run:
    production branch. Store the Android signing keystore safely and do not commit it.
 4. Configure the Vercel project’s production environment variables, including `VITE_API_URL` and
    `VITE_GOOGLE_CLIENT_ID`. The workflow uses those values for its production build.
-5. Create the Capgo app for `com.chatimall.app` and a `production` channel that permits the app's
-   configured default channel.
+5. No Capgo account, token, or separate update server is required. Vercel serves the update-check
+   endpoint and versioned ZIP bundles alongside the web app. The updater is configured to use that
+   production endpoint and verifies bundle downloads with a SHA-256 checksum.
 
 To encode an Android keystore for the `ANDROID_KEYSTORE_BASE64` secret in PowerShell:
 
@@ -84,9 +85,12 @@ To encode an Android keystore for the `ANDROID_KEYSTORE_BASE64` secret in PowerS
 [Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\path\to\chatimall-release.jks'))
 ```
 
-Capgo live updates are limited to compatible HTML, CSS, JavaScript, and web assets. Changes to native
-code, Capacitor configuration, or plugins still need a signed APK. The new APK must be installed once
-to add the Capgo updater to existing devices; later compatible web updates can arrive over the air.
+Self-hosted live updates are limited to web assets compatible with the native code already installed.
+Changes to native code, Capacitor configuration, or plugins still need a signed APK; do not publish an
+OTA bundle that requires a native change. The new APK must be installed once to add/configure the
+updater on existing devices; later compatible web updates can arrive over the air. This avoids
+Capgo's paid service, but does not guarantee unlimited or permanently free hosting: the endpoint and bundles use
+Vercel's quotas, so monitor usage and check the current plan limits.
 Direct APK installation continues to require Android's install confirmation. The signing keystore
 must match the one used for existing production APKs or Android will reject the APK as an update;
 devices running debug builds will need a one-time uninstall/reinstall to move to a separately signed
@@ -120,9 +124,9 @@ Settings → Chat backup supports password-protected backups in browsers and And
 4. For Android, create an **Android** OAuth client in the same project for package `com.chatimall.app`. Register the SHA-1 signing fingerprints used by your debug, release, and Play-signed APKs.
 5. Set `VITE_GOOGLE_CLIENT_ID` to the Web client ID in `frontend/.env.local`, Vercel, or the environment used for APK builds. Rebuild/redeploy after changing it. This is a public client ID; never put a client secret in the frontend.
 
-Automatic weekly backups are opt-in and run while Chatimall is open and online; they do not run while the app is closed. Enabling them creates an initial backup and generates a 64-character recovery key. Save that key somewhere safe: it is stored only on the current device, is never uploaded, and is required to restore an automatic backup on another device. Existing password-encrypted backups can still be restored with their password. Chatimall cannot recover a lost password or recovery key.
+Automatic scheduled backups are not available yet. Use **Back up now** in Settings to create a password-protected backup. Save the password somewhere safe; Chatimall cannot recover it.
 
-The first Drive action asks you to authorize access. If Google requires authorization again, use **Find backups in Google Drive** or **Back up now with recovery key** in Settings. After signing in on a new device, enter the backup password or recovery key to restore the device encryption key. Chat history remains in the signed-in Chatimall account; the Drive file includes an encrypted history snapshot as well.
+The first Drive action asks you to authorize access. If Google requires authorization again, use **Find backups in Google Drive** in Settings. After signing in on a new device, enter the backup password to restore the device encryption key. Chat history remains in the signed-in Chatimall account; the Drive file includes an encrypted history snapshot as well.
 
 ## Android APK (Capacitor)
 

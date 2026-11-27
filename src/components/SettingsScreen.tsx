@@ -1506,7 +1506,7 @@ export default function SettingsScreen({
             </div>
 
             <div className="rounded-xl bg-paper-mist p-3 text-xs leading-relaxed text-ink-mute">
-              The backup uses your password and AES-256 encryption before upload. Keep the password safe; Chatimall cannot recover it. Attachments remain in your Chatimall account and are not copied into the backup. Automatic scheduled backups need additional Google authorization setup.
+              The backup uses your password and AES-256 encryption before upload. Keep the password safe; Chatimall cannot recover it. Attachments remain in your Chatimall account and are not copied into the backup. Automatic scheduled backups are not available yet.
             </div>
             {backupError && <p role="alert" className="text-sm text-rose-600">{backupError}</p>}
           </div>

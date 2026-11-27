@@ -11,7 +11,9 @@
   "plugins": {
     "CapacitorUpdater": {
       "autoUpdate": "atBackground",
-      "defaultChannel": "production"
+      "defaultChannel": "production",
+      "updateUrl": "https://praisecyber-chatimall-frontend.vercel.app/api/updates",
+      "statsUrl": ""
     },
     "SocialLogin": {
       "providers": {

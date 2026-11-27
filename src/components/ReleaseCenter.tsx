@@ -95,20 +95,12 @@ function ReleaseCenter() {
           <article className="rounded-2xl border border-paper-line bg-white p-4 sm:p-5">
             <div className="mb-3 flex items-center gap-2 text-brand-700">
               <Smartphone className="h-4 w-4" />
-              <h3 className="text-sm font-bold text-ink">Android · Capgo live updates</h3>
+              <h3 className="text-sm font-bold text-ink">Android · Self-hosted live updates</h3>
             </div>
             <p className="text-xs leading-relaxed text-ink-mute">
-              HTML, CSS, JavaScript, and other compatible web assets can update without downloading a new
-              APK. Native code or plugin changes still require a new signed APK.
+              Compatible web assets are packaged and served by the existing Vercel deployment. Updates use
+              HTTPS and a verified SHA-256 checksum; native code or plugin changes still require a new APK.
             </p>
-            <a
-              href="https://console.capgo.app/"
-              target="_blank"
-              rel="noreferrer"
-              className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-brand-700 hover:text-brand-800"
-            >
-              Open Capgo console <ExternalLink className="h-3 w-3" />
-            </a>
           </article>
 
           <article className="rounded-2xl border border-paper-line bg-white p-4 sm:p-5">
@@ -157,20 +149,17 @@ function ReleaseCenter() {
           </h3>
           <ul className="mt-3 space-y-2 text-xs leading-relaxed text-amber-950/80">
             <li>
-              Add the required GitHub Actions secrets: Vercel project credentials, Capgo API token,
-              a fine-grained release token for <code className="font-mono">praisecyber/chatimall</code>,
-              production API URL, and Android signing keystore/passwords.
+              Add Vercel project credentials, a fine-grained release token for{' '}
+              <code className="font-mono">praisecyber/chatimall</code>, production API URL, and Android
+              signing keystore/passwords to the documented GitHub secret scopes. No Capgo account or token
+              is required.
             </li>
             <li>Push or merge the feature code to the frontend repository before running its release workflow.</li>
             <li>
               Create a GitHub environment named <code className="font-mono">production</code> and require
               an approval reviewer so the publish job pauses before going live.
             </li>
-            <li>
-              Register <code className="font-mono">com.chatimall.app</code> in Capgo and configure its
-              production channel. Existing installs need one new APK install to receive the updater;
-              after that, compatible web changes can arrive over the air.
-            </li>
+            <li>Only publish OTA-compatible web changes; native and plugin changes require a signed APK update.</li>
             <li>
               Keep the Android signing keystore identical to the one used for existing production APKs.
               Otherwise Android will reject the APK as an update.
