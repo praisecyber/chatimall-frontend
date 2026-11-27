@@ -78,11 +78,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Capgo bundle tooling
+        run: npm install --global @capgo/cli@8.114.2
+
       - name: Check types and lint
         run: |
           npm run typecheck
+          node --test tests/updates.test.mjs
           npx eslint src/components/ReleaseCenter.tsx src/App.tsx src/components/DownloadPage.tsx
           npx eslint src/components/AdminPanel.tsx --rule '@typescript-eslint/no-unused-vars: off'
+          npx eslint api/updates.js tests/updates.test.mjs
           node --check scripts/patch-android.mjs
 
       - name: Build web assets
@@ -125,12 +130,32 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon assembleRelease
 
-      - name: Prepare release package
+      - name: Package compatible Android live update
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
         shell: bash
         run: |
+          capgo bundle zip com.chatimall.app \
+            --path dist \
+            --bundle "$RELEASE_VERSION" \
+            --json > "$RUNNER_TEMP/chatimall-update.json"
+          test -f "com.chatimall.app_$RELEASE_VERSION.zip"
           mkdir -p release-package
-          cp -R dist release-package/dist
           cp android/app/build/outputs/apk/release/app-release.apk release-package/Chatimall.apk
+          mv "com.chatimall.app_$RELEASE_VERSION.zip" release-package/Chatimall-update.zip
+          node --input-type=module -e '
+            import { createHash } from "node:crypto";
+            import { readFileSync, writeFileSync } from "node:fs";
+            const result = JSON.parse(readFileSync(process.env.RUNNER_TEMP + "/chatimall-update.json", "utf8"));
+            const checksum = createHash("sha256").update(readFileSync("release-package/Chatimall-update.zip")).digest("hex");
+            if (typeof result.checksum !== "string" || result.checksum.toLowerCase() !== checksum) {
+              throw new Error("Capgo CLI checksum does not match the generated update archive.");
+            }
+            writeFileSync("release-package/update-manifest.json", JSON.stringify({
+              version: process.env.RELEASE_VERSION,
+              checksum,
+            }));
+          '
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -165,24 +190,19 @@ jobs:
           path: release-package
 
       - name: Install deployment CLIs
-        run: npm install --global vercel@67.0.0 @capgo/cli@8.114.2
+        run: npm install --global vercel@67.0.0
 
       - name: Install project dependencies
         run: npm ci
 
       - name: Validate publish credentials
         env:
-          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           CHATIMALL_RELEASE_TOKEN: ${{ secrets.CHATIMALL_RELEASE_TOKEN }}
         shell: bash
         run: |
-          [[ -n "$CAPGO_TOKEN" ]] || {
-            echo "::error::Set CAPGO_TOKEN in the production GitHub environment."
-            exit 1
-          }
           [[ -n "$VERCEL_TOKEN" && -n "$VERCEL_ORG_ID" && -n "$VERCEL_PROJECT_ID" ]] || {
             echo "::error::Set VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID in the production GitHub environment."
             exit 1
@@ -216,6 +236,14 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
+      - name: Stage self-hosted live update
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p public/updates
+          cp release-package/Chatimall-update.zip "public/updates/$RELEASE_VERSION.zip"
+          cp release-package/update-manifest.json public/updates/latest.json
+
       - name: Build Vercel production output
         run: vercel build --prod
 
@@ -223,21 +251,6 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
-
-      - name: Publish compatible Android live update to Capgo
-        env:
-          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
-          RELEASE_VERSION: ${{ inputs.version }}
-          RELEASE_NOTES: ${{ inputs.release_notes }}
-        run: |
-          capgo bundle upload com.chatimall.app \
-            --path=release-package/dist \
-            --channel=production \
-            --apikey="$CAPGO_TOKEN" \
-            --bundle="$RELEASE_VERSION" \
-            --comment="$RELEASE_NOTES" \
-            --delta \
-            --fail-on-incompatible
 
       - name: Publish signed APK to GitHub Releases
         env:
