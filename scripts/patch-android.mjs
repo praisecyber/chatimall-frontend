@@ -156,6 +156,24 @@ writeIfChanged(rootBuildFile, originalRootBuild, rootBuild);
 const appBuildFile = path.join('android', 'app', 'build.gradle');
 const originalAppBuild = fs.readFileSync(appBuildFile, 'utf8');
 let appBuild = originalAppBuild;
+const androidVersionCode = process.env.ANDROID_VERSION_CODE || '1';
+const androidVersionName = process.env.ANDROID_VERSION_NAME || '1.0';
+const releaseBuild = process.env.RELEASE_BUILD === 'true';
+const signingValues = [
+  process.env.ANDROID_KEYSTORE_FILE,
+  process.env.ANDROID_KEY_ALIAS,
+  process.env.ANDROID_STORE_PASSWORD,
+  process.env.ANDROID_KEY_PASSWORD,
+];
+if (!/^[1-9]\d*$/.test(androidVersionCode) || Number(androidVersionCode) > 2100000000) {
+  throw new Error('ANDROID_VERSION_CODE must be an integer between 1 and 2100000000.');
+}
+if (!/^\d+\.\d+(?:\.\d+)?$/.test(androidVersionName)) {
+  throw new Error('ANDROID_VERSION_NAME must use numeric major.minor[.patch] format.');
+}
+if (releaseBuild && signingValues.some((value) => !value)) {
+  throw new Error('A production APK requires ANDROID_KEYSTORE_FILE, ANDROID_KEY_ALIAS, ANDROID_STORE_PASSWORD, and ANDROID_KEY_PASSWORD.');
+}
 if (!appBuild.includes('def tiktokClientKey')) {
   appBuild = replaceOrThrow(
     appBuild,
@@ -164,12 +182,66 @@ if (!appBuild.includes('def tiktokClientKey')) {
     'TikTok client-key setting'
   );
 }
+if (!appBuild.includes('def chatimallReleaseBuild')) {
+  appBuild = replaceOrThrow(
+    appBuild,
+    /^apply plugin: ['"]com\.android\.application['"]\r?\n/m,
+    (pluginLine) =>
+      `${pluginLine}` +
+      `def chatimallReleaseBuild = providers.environmentVariable("RELEASE_BUILD").orElse("false").get() == "true"\n` +
+      `def chatimallKeyStoreFile = providers.environmentVariable("ANDROID_KEYSTORE_FILE").orElse("").get()\n` +
+      `def chatimallKeyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").orElse("").get()\n` +
+      `def chatimallStorePassword = providers.environmentVariable("ANDROID_STORE_PASSWORD").orElse("").get()\n` +
+      `def chatimallKeyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").orElse("").get()\n` +
+      `if (chatimallReleaseBuild && [chatimallKeyStoreFile, chatimallKeyAlias, chatimallStorePassword, chatimallKeyPassword].any { !it }) {\n` +
+      `    throw new GradleException("Production APK signing secrets are incomplete.")\n` +
+      `}\n`,
+    'production APK signing settings'
+  );
+}
+const versionCodePattern = /^([ \t]*)versionCode\s+\d+\s*$/m;
+const versionNamePattern = /^([ \t]*)versionName\s+['"][^'"]+['"]\s*$/m;
+if (!versionCodePattern.test(appBuild) || !versionNamePattern.test(appBuild)) {
+  throw new Error('Could not locate Android versionCode/versionName in the generated app build file.');
+}
+appBuild = appBuild.replace(versionCodePattern, (_, indent) => `${indent}versionCode ${androidVersionCode}`);
+appBuild = appBuild.replace(versionNamePattern, (_, indent) => `${indent}versionName "${androidVersionName}"`);
 if (!appBuild.includes('buildConfigField "String", "TIKTOK_CLIENT_KEY"')) {
   appBuild = replaceOrThrow(
     appBuild,
     /^(\s*versionName\s+['"][^'"]+['"])/m,
-    (versionLine) => `${versionLine}\n        buildConfigField "String", "TIKTOK_CLIENT_KEY", "\\"${tiktokClientKey}\\""`,
+    (versionLine) =>
+      `${versionLine}\n        buildConfigField "String", "TIKTOK_CLIENT_KEY", "\\\"` +
+      '${tiktokClientKey}' +
+      `\\\""`,
     'TikTok client-key BuildConfig field'
+  );
+}
+if (!appBuild.includes('storeFile file(chatimallKeyStoreFile)')) {
+  appBuild = replaceOrThrow(
+    appBuild,
+    /^    buildTypes\s*\{/m,
+    (buildTypesBlock) =>
+      `    signingConfigs {\n` +
+      `        release {\n` +
+      `            if (chatimallReleaseBuild) {\n` +
+      `                storeFile file(chatimallKeyStoreFile)\n` +
+      `                storePassword chatimallStorePassword\n` +
+      `                keyAlias chatimallKeyAlias\n` +
+      `                keyPassword chatimallKeyPassword\n` +
+      `            }\n` +
+      `        }\n` +
+      `    }\n\n` +
+      `${buildTypesBlock}`,
+    'production APK signing configuration'
+  );
+}
+if (!appBuild.includes('signingConfig signingConfigs.release')) {
+  appBuild = replaceOrThrow(
+    appBuild,
+    /^        release \{\r?\n/m,
+    (releaseBlock) => `${releaseBlock}            if (chatimallReleaseBuild) signingConfig signingConfigs.release\n`,
+    'production APK signing assignment'
   );
 }
 appBuild = appBuild.replace(/^        buildFeatures\s*\{\r?\n            buildConfig true\r?\n        \}\r?\n/m, '');
@@ -214,16 +286,54 @@ for (const importName of [
   'android.webkit.WebSettings',
   'androidx.core.splashscreen.SplashScreen',
   'com.getcapacitor.PluginHandle',
+  'ee.forgr.capacitor.social.login.GoogleProvider',
+  'ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin',
+  'ee.forgr.capacitor.social.login.SocialLoginPlugin',
 ]) {
   activity = ensureJavaImport(activity, importName);
 }
-if (!activity.includes('SplashScreen.installSplashScreen(this)')) {
+if (!activity.includes('implements ModifiedMainActivityForSocialLoginPlugin')) {
   activity = replaceOrThrow(
     activity,
-    /public\s+void\s+onCreate\s*\(\s*Bundle\s+savedInstanceState\s*\)\s*\{/,
-    (methodStart) => `${methodStart}\n        SplashScreen.installSplashScreen(this);`,
-    'Chatimall splash-screen installation'
+    /public\s+class\s+MainActivity\s+extends\s+BridgeActivity(?:\s+implements\s+[^{]+)?\s*\{/,
+    (classDeclaration) => {
+      const declaration = classDeclaration.slice(0, classDeclaration.lastIndexOf('{')).trim();
+      const existing = declaration.match(/\bimplements\s+(.+)$/);
+      const base = existing ? declaration.slice(0, existing.index).trim() : declaration;
+      const interfaces = existing ? `${existing[1].trim()}, ModifiedMainActivityForSocialLoginPlugin` : 'ModifiedMainActivityForSocialLoginPlugin';
+      return `${base} implements ${interfaces} {`;
+    },
+    'Google sign-in activity interface'
   );
+}
+if (!activity.includes('handleGoogleLoginIntent')) {
+  if (/\bonActivityResult\s*\(/.test(activity)) {
+    throw new Error('MainActivity already defines onActivityResult; merge the Google sign-in result handler manually.');
+  }
+  activity = insertBeforeClassEnd(
+    activity,
+    'handleGoogleLoginIntent',
+    `    @Override\n    public void IHaveModifiedTheMainActivityForTheUseWithSocialLoginPlugin() {}\n\n    @Override\n    public void onActivityResult(int requestCode, int resultCode, Intent data) {\n        super.onActivityResult(requestCode, resultCode, data);\n        if (requestCode < GoogleProvider.REQUEST_AUTHORIZE_GOOGLE_MIN || requestCode >= GoogleProvider.REQUEST_AUTHORIZE_GOOGLE_MAX) return;\n\n        PluginHandle handle = getBridge() == null ? null : getBridge().getPlugin(\"SocialLogin\");\n        if (handle == null || !(handle.getInstance() instanceof SocialLoginPlugin)) return;\n        ((SocialLoginPlugin) handle.getInstance()).handleGoogleLoginIntent(requestCode, data);\n    }`,
+    'Google sign-in activity-result handler'
+  );
+}
+if (!activity.includes('SplashScreen.installSplashScreen(this)')) {
+  const onCreate = /public\s+void\s+onCreate\s*\(\s*Bundle\s+savedInstanceState\s*\)\s*\{/;
+  if (onCreate.test(activity)) {
+    activity = replaceOrThrow(
+      activity,
+      onCreate,
+      (methodStart) => `${methodStart}\n        SplashScreen.installSplashScreen(this);`,
+      'Chatimall splash-screen installation'
+    );
+  } else {
+    activity = insertBeforeClassEnd(
+      activity,
+      'SplashScreen.installSplashScreen(this)',
+      `    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        SplashScreen.installSplashScreen(this);\n        super.onCreate(savedInstanceState);\n    }`,
+      'Chatimall splash-screen installation'
+    );
+  }
 }
 if (!activity.includes('registerPlugin(TikTokSharePlugin.class)')) {
   const onCreate = /public\s+void\s+onCreate\s*\(\s*Bundle\s+savedInstanceState\s*\)\s*\{/;

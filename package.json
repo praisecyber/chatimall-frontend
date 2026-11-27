@@ -28,6 +28,8 @@
     "@capacitor/core": "^8.5.2",
     "@capacitor/push-notifications": "^8.1.2",
     "@capgo/capacitor-native-biometric": "^8.7.0",
+    "@capgo/capacitor-social-login": "^8.7.13",
+    "@capgo/capacitor-updater": "^8.54.2",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
     "firebase": "^12.6.0",

@@ -1,0 +1,253 @@
+name: Chatimall production release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Numeric release version (for example 1.0.1)
+        required: true
+        default: "1.0.1"
+        type: string
+      release_notes:
+        description: Notes shown on the GitHub release
+        required: true
+        default: "Chatimall production update"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chatimall-production-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Test and build release artifacts
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_BUILD: "true"
+      ANDROID_VERSION_CODE: ${{ github.run_number }}
+      ANDROID_VERSION_NAME: ${{ inputs.version }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Validate release settings and signing secrets
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          ANDROID_VERSION_CODE=$((GITHUB_RUN_NUMBER + 1))
+          echo "ANDROID_VERSION_CODE=$ANDROID_VERSION_CODE" >> "$GITHUB_ENV"
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "::error::Version must be numeric major.minor.patch, such as 1.0.1."
+            exit 1
+          }
+          [[ "$ANDROID_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || {
+            echo "::error::GitHub Actions produced an invalid Android version code."
+            exit 1
+          }
+          [[ -n "$VITE_API_URL" && -n "$VITE_GOOGLE_CLIENT_ID" ]] || {
+            echo "::error::Set VITE_API_URL and VITE_GOOGLE_CLIENT_ID in GitHub Actions secrets."
+            exit 1
+          }
+          [[ -n "$ANDROID_KEYSTORE_BASE64" && -n "$ANDROID_KEY_ALIAS" && -n "$ANDROID_STORE_PASSWORD" && -n "$ANDROID_KEY_PASSWORD" ]] || {
+            echo "::error::Android signing secrets are required to publish a production APK."
+            exit 1
+          }
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check types and lint
+        run: |
+          npm run typecheck
+          npx eslint src/components/ReleaseCenter.tsx src/App.tsx src/components/DownloadPage.tsx
+          npx eslint src/components/AdminPanel.tsx --rule '@typescript-eslint/no-unused-vars: off'
+          node --check scripts/patch-android.mjs
+
+      - name: Build web assets
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+        run: npm run build
+
+      - name: Prepare Android signing and Firebase files
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
+        shell: bash
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/chatimall-release.jks"
+          if [[ -n "$ANDROID_GOOGLE_SERVICES_JSON_BASE64" ]]; then
+            printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > google-services.json
+          fi
+
+      - name: Generate Android project
+        run: npx cap add android
+
+      - name: Configure production APK signing
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/chatimall-release.jks
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: node scripts/patch-android.mjs
+
+      - name: Sync Android project
+        run: npx cap sync android
+
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/chatimall-release.jks
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Prepare release package
+        shell: bash
+        run: |
+          mkdir -p release-package
+          cp -R dist release-package/dist
+          cp android/app/build/outputs/apk/release/app-release.apk release-package/Chatimall.apk
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chatimall-release-${{ inputs.version }}
+          path: release-package/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Approve and publish production release
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://github.com/praisecyber/chatimall/releases/latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download built release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: chatimall-release-${{ inputs.version }}
+          path: release-package
+
+      - name: Install deployment CLIs
+        run: npm install --global vercel@67.0.0 @capgo/cli@8.114.2
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Validate publish credentials
+        env:
+          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          CHATIMALL_RELEASE_TOKEN: ${{ secrets.CHATIMALL_RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          [[ -n "$CAPGO_TOKEN" ]] || {
+            echo "::error::Set CAPGO_TOKEN in the production GitHub environment."
+            exit 1
+          }
+          [[ -n "$VERCEL_TOKEN" && -n "$VERCEL_ORG_ID" && -n "$VERCEL_PROJECT_ID" ]] || {
+            echo "::error::Set VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID in the production GitHub environment."
+            exit 1
+          }
+          [[ -n "$CHATIMALL_RELEASE_TOKEN" ]] || {
+            echo "::error::Set CHATIMALL_RELEASE_TOKEN in the production GitHub environment."
+            exit 1
+          }
+
+      - name: Ensure the release tag is unused
+        env:
+          GH_TOKEN: ${{ secrets.CHATIMALL_RELEASE_TOKEN }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          if gh api "repos/praisecyber/chatimall/git/ref/tags/v$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "::error::Release v$RELEASE_VERSION already exists. Choose a new version."
+            exit 1
+          fi
+
+      - name: Configure Vercel project
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          mkdir -p .vercel
+          node -e 'require("node:fs").writeFileSync(".vercel/project.json", JSON.stringify({ projectId: process.env.VERCEL_PROJECT_ID, orgId: process.env.VERCEL_ORG_ID }))'
+
+      - name: Pull Vercel production settings
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build Vercel production output
+        run: vercel build --prod
+
+      - name: Deploy Vercel production output
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      - name: Publish compatible Android live update to Capgo
+        env:
+          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          capgo bundle upload com.chatimall.app \
+            --path=release-package/dist \
+            --channel=production \
+            --apikey="$CAPGO_TOKEN" \
+            --bundle="$RELEASE_VERSION" \
+            --comment="$RELEASE_NOTES" \
+            --delta \
+            --fail-on-incompatible
+
+      - name: Publish signed APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.CHATIMALL_RELEASE_TOKEN }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        shell: bash
+        run: |
+          gh release create "v$RELEASE_VERSION" release-package/Chatimall.apk \
+            --repo praisecyber/chatimall \
+            --target main \
+            --title "Chatimall v$RELEASE_VERSION" \
+            --notes "$RELEASE_NOTES"
