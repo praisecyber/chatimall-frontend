@@ -4,6 +4,7 @@ import {
   ShieldAlert,
   ArrowLeft,
   ArrowRight,
+  Rocket,
   Users,
   MessageSquare,
   Radio,
@@ -103,12 +104,13 @@ import type {
 } from '@/types';
 import { formatChatTime } from '@/lib/format';
 import CountryFlag from '@/components/CountryFlag';
+import ReleaseCenter from '@/components/ReleaseCenter';
 
 interface AdminPanelProps {
   onBack: () => void;
 }
 
-type MainView = 'live_desk' | 'analytics' | 'users' | 'moderation' | 'settings' | 'channels' | 'broadcast';
+type MainView = 'live_desk' | 'analytics' | 'users' | 'moderation' | 'settings' | 'channels' | 'broadcast' | 'releases';
 type InboxFilter = 'all' | 'assigned' | 'unassigned';
 type StatusFilter = 'all' | 'active' | 'flagged' | 'suspended';
 type MobilePane = 'queue' | 'chat' | 'profile';
@@ -1227,7 +1229,7 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
         </div>
 
         {/* View Switcher Icons on Mobile */}
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
           <button
             onClick={() => setActiveView('live_desk')}
             className={`p-2 rounded-xl text-xs ${
@@ -1279,6 +1281,15 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
             title="Settings"
           >
             <SlidersHorizontal className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setActiveView('releases')}
+            className={`p-2 rounded-xl text-xs ${
+              activeView === 'releases' ? 'bg-brand-600 text-white' : 'text-ink-mute'
+            }`}
+            title="Release Center"
+          >
+            <Rocket className="w-4 h-4" />
           </button>
         </div>
       </header>
@@ -1387,6 +1398,18 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
               title="System Configuration & Limits"
             >
               <SlidersHorizontal className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => setActiveView('releases')}
+              className={`w-10 h-10 rounded-2xl flex items-center justify-center transition cursor-pointer ${
+                activeView === 'releases'
+                  ? 'bg-brand-600 text-white shadow-lift font-bold'
+                  : 'text-ink-mute hover:text-ink hover:bg-brand-50/60'
+              }`}
+              title="Production Release Center"
+            >
+              <Rocket className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -2464,6 +2487,8 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
       {/* ─────────────────────────────────────────────────────────────
           8. FULL VIEW: SYSTEM CONFIGURATION
       ───────────────────────────────────────────────────────────── */}
+      {activeView === 'releases' && <ReleaseCenter />}
+
       {activeView === 'settings' && (
         <div className="flex-1 flex flex-col h-full overflow-y-auto bg-paper p-4 sm:p-6 space-y-6">
           <form onSubmit={handleSaveSettings} className="max-w-2xl mx-auto w-full space-y-5">

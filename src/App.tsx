@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
 import LandingPage from '@/components/LandingPage';
 import DownloadPage from '@/components/DownloadPage';
@@ -7,6 +8,7 @@ import AdminPanel from '@/components/AdminPanel';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { CallProvider } from '@/lib/calls';
 import { isNative, unregisterPush } from '@/lib/native';
+import { maybeCreateScheduledDriveBackup } from '@/lib/backup';
 import { AuthScreen, ProfileSetup, FullScreenSpinner } from '@/components/AuthScreen';
 import type { Screen, Chat } from '@/types';
 
@@ -24,6 +26,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 function App() {
   const { userId, profile, signOut } = useAuth();
+
+  useEffect(() => {
+    if (!isNative()) return;
+    void CapacitorUpdater.notifyAppReady().catch((error) => {
+      console.error('Capgo could not confirm the app startup.', error);
+    });
+  }, []);
 
   const isOwnerAdmin = Boolean(
     profile?.is_admin ||
@@ -54,6 +63,25 @@ function App() {
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [isNarrowViewport, setIsNarrowViewport] = useState(() => window.innerWidth < 768);
   const isMobileLayout = isNative() || isNarrowViewport;
+
+  useEffect(() => {
+    if (!userId) return;
+    const tryBackup = () => {
+      void maybeCreateScheduledDriveBackup(userId).catch((error) => {
+        console.warn('Scheduled Google Drive backup was skipped.', error);
+      });
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') tryBackup();
+    };
+    tryBackup();
+    window.addEventListener('online', tryBackup);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('online', tryBackup);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [userId]);
 
   useEffect(() => {
     const onResize = () => setIsNarrowViewport(window.innerWidth < 768);

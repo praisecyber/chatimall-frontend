@@ -9,6 +9,18 @@
     "allowMixedContent": false
   },
   "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": "atBackground",
+      "defaultChannel": "production"
+    },
+    "SocialLogin": {
+      "providers": {
+        "google": true,
+        "facebook": false,
+        "apple": false,
+        "twitter": false
+      }
+    },
     "PushNotifications": {
       "presentationOptions": [
         "badge",

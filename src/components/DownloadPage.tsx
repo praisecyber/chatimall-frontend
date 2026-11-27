@@ -16,7 +16,7 @@ import {
 const WINDOWS_DOWNLOAD_URL =
   'https://github.com/praisecyber/chatimall/releases/latest/download/Chatimall-Setup.exe';
 const APK_DOWNLOAD_URL =
-  'https://github.com/praisecyber/chatimall/releases/download/v1.0.0/Chatimall.apk';
+  'https://github.com/praisecyber/chatimall/releases/latest/download/Chatimall.apk';
 
 function DownloadPage({
   onOpenWebApp,
