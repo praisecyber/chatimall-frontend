@@ -124,9 +124,9 @@ Settings → Chat backup supports password-protected backups in browsers and And
 4. For Android, create an **Android** OAuth client in the same project for package `com.chatimall.app`. Register the SHA-1 signing fingerprints used by your debug, release, and Play-signed APKs.
 5. Set `VITE_GOOGLE_CLIENT_ID` to the Web client ID in `frontend/.env.local`, Vercel, or the environment used for APK builds. Rebuild/redeploy after changing it. This is a public client ID; never put a client secret in the frontend.
 
-Automatic weekly backups are opt-in and run while Chatimall is open and online; they do not run while the app is closed. Enabling them creates an initial backup and generates a 64-character recovery key. Save that key somewhere safe: it is stored only on the current device, is never uploaded, and is required to restore an automatic backup on another device. Existing password-encrypted backups can still be restored with their password. Chatimall cannot recover a lost password or recovery key.
+Automatic scheduled backups are not available yet. Use **Back up now** in Settings to create a password-protected backup. Save the password somewhere safe; Chatimall cannot recover it.
 
-The first Drive action asks you to authorize access. If Google requires authorization again, use **Find backups in Google Drive** or **Back up now with recovery key** in Settings. After signing in on a new device, enter the backup password or recovery key to restore the device encryption key. Chat history remains in the signed-in Chatimall account; the Drive file includes an encrypted history snapshot as well.
+The first Drive action asks you to authorize access. If Google requires authorization again, use **Find backups in Google Drive** in Settings. After signing in on a new device, enter the backup password to restore the device encryption key. Chat history remains in the signed-in Chatimall account; the Drive file includes an encrypted history snapshot as well.
 
 ## Android APK (Capacitor)
 

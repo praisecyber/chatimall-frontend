@@ -8,7 +8,6 @@ import AdminPanel from '@/components/AdminPanel';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { CallProvider } from '@/lib/calls';
 import { isNative, unregisterPush } from '@/lib/native';
-import { maybeCreateScheduledDriveBackup } from '@/lib/backup';
 import { AuthScreen, ProfileSetup, FullScreenSpinner } from '@/components/AuthScreen';
 import type { Screen, Chat } from '@/types';
 
@@ -63,25 +62,6 @@ function App() {
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [isNarrowViewport, setIsNarrowViewport] = useState(() => window.innerWidth < 768);
   const isMobileLayout = isNative() || isNarrowViewport;
-
-  useEffect(() => {
-    if (!userId) return;
-    const tryBackup = () => {
-      void maybeCreateScheduledDriveBackup(userId).catch((error) => {
-        console.warn('Scheduled Google Drive backup was skipped.', error);
-      });
-    };
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') tryBackup();
-    };
-    tryBackup();
-    window.addEventListener('online', tryBackup);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      window.removeEventListener('online', tryBackup);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
-  }, [userId]);
 
   useEffect(() => {
     const onResize = () => setIsNarrowViewport(window.innerWidth < 768);
